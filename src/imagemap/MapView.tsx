@@ -43,7 +43,6 @@ export function MapView() {
 
   const paused = useGame((s) => s.paused);
   const nearby = useGame((s) => s.nearby);
-  const setNearby = useGame((s) => s.setNearby);
   const openPanel = useGame((s) => s.openPanel);
 
   const aspect = layout.image.width / layout.image.height;
@@ -56,7 +55,6 @@ export function MapView() {
   /** Waypoints left to walk, from a click. Empty when steering by hand. */
   const route = useRef<Point[]>([]);
   const grid = useRef<Grid | null>(null);
-  const fit = useRef({ scale: 1, x: 0, y: 0 });
 
   useEffect(() => {
     const img = new Image();
@@ -75,6 +73,7 @@ export function MapView() {
         (window as unknown as Record<string, unknown>).__map = {
           sprite: loaded,
           character,
+          route,
           layout,
         };
       }
@@ -117,15 +116,39 @@ export function MapView() {
     };
   }, [openPanel]);
 
-  const pointerToImage = useCallback((clientX: number, clientY: number): Point => {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-    const { scale, x, y } = fit.current;
+  /**
+   * How the image is laid into the canvas: the whole map, centred.
+   *
+   * Worked out on demand rather than cached by the render loop. It used to be
+   * a ref the loop filled each frame, which meant a click that landed before
+   * the first frame — the map is a couple of megabytes, so there is a window —
+   * was converted with the ref's initial values and walked somewhere else
+   * entirely.
+   */
+  const fitFor = useCallback((canvas: HTMLCanvasElement) => {
+    const scale = Math.min(
+      canvas.clientWidth / layout.image.width,
+      canvas.clientHeight / layout.image.height,
+    );
     return {
-      x: (clientX - rect.left - x) / (layout.image.width * scale),
-      y: (clientY - rect.top - y) / (layout.image.height * scale),
+      scale,
+      x: (canvas.clientWidth - layout.image.width * scale) / 2,
+      y: (canvas.clientHeight - layout.image.height * scale) / 2,
     };
   }, []);
+
+  const pointerToImage = useCallback(
+    (clientX: number, clientY: number): Point => {
+      const canvas = canvasRef.current!;
+      const rect = canvas.getBoundingClientRect();
+      const { scale, x, y } = fitFor(canvas);
+      return {
+        x: (clientX - rect.left - x) / (layout.image.width * scale),
+        y: (clientY - rect.top - y) / (layout.image.height * scale),
+      };
+    },
+    [fitFor],
+  );
 
   /* --------------------------------------------------------------- frame */
 
@@ -137,7 +160,6 @@ export function MapView() {
 
     let raf = 0;
     let last = performance.now();
-    let lastNearbyId: string | null = null;
 
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
@@ -154,12 +176,10 @@ export function MapView() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       // The whole map, always: there is no zoom past the image's own pixels.
-      const scale = Math.min(width / layout.image.width, height / layout.image.height);
-      const ox = (width - layout.image.width * scale) / 2;
-      const oy = (height - layout.image.height * scale) / 2;
-      fit.current = { scale, x: ox, y: oy };
+      const { scale, x: ox, y: oy } = fitFor(canvas);
 
-      if (!useGame.getState().paused) {
+      const state = useGame.getState();
+      if (!state.paused) {
         const held = keys.current;
         const manual = {
           x: (held.has("ArrowRight") || held.has("KeyD") ? 1 : 0) -
@@ -184,11 +204,12 @@ export function MapView() {
 
         character.current = advance(character.current, intent, dt, layout.shapes, aspect);
 
+        // Compared against the store rather than a local cache: anything else
+        // that writes `nearby` would leave a cache stale, and a stale one is
+        // silent — the prompt simply never comes back.
         const hotspot = hotspotAt(character.current.at, layout);
-        const id = hotspot?.id ?? null;
-        if (id !== lastNearbyId) {
-          lastNearbyId = id;
-          setNearby(
+        if ((hotspot?.id ?? null) !== (state.nearby?.id ?? null)) {
+          state.setNearby(
             hotspot
               ? {
                   id: hotspot.id,
@@ -256,7 +277,7 @@ export function MapView() {
 
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [image, aspect, debug, setNearby]);
+  }, [image, aspect, debug, fitFor]);
 
   const hint = useMemo(
     () => (nearby ? nearby.label : "arrows or click to walk · G shows the ground"),

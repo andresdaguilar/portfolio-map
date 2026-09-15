@@ -80,7 +80,16 @@ export const useGame = create<GameState>((set, get) => ({
   touch: false,
 
   setReady: (ready) => set({ ready }),
-  openPanel: (panel) => set({ panel, paused: true, nearby: null }),
+  /**
+   * Opening a panel does not forget what the player is standing next to.
+   *
+   * It used to clear `nearby`, which read as tidy and was not: the prompts
+   * already hide themselves while paused, and clearing it left the frame loop
+   * — which caches what it last reported — convinced it had nothing to say.
+   * Closing the panel then left you on the hotspot with no way to reopen it
+   * short of walking off and back on.
+   */
+  openPanel: (panel) => set({ panel, paused: true }),
   closePanel: () => set({ panel: null, paused: false }),
   setPaused: (paused) => set({ paused }),
   setZone: (zone) => set({ zone }),

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { nearestPoi, type Poi } from "./core/interaction";
 import { takeAction } from "./core/input";
@@ -15,17 +14,15 @@ import { player } from "./player/body";
  * overlay sixty times a second for no reason.
  */
 export function Interactions() {
-  const current = useRef<string | null>(null);
-
   useFrame(() => {
     const state = useGame.getState();
     if (state.paused) return;
 
     const poi = nearestPoi(player.x, player.y);
-    const id = poi?.id ?? null;
 
-    if (id !== current.current) {
-      current.current = id;
+    // Compared against the store rather than a cache beside it: a cache goes
+    // stale the moment anything else writes `nearby`, and it fails silently.
+    if ((poi?.id ?? null) !== (state.nearby?.id ?? null)) {
       state.setNearby(
         poi && poi.target
           ? { id: poi.id, label: poi.label, target: poi.target }
