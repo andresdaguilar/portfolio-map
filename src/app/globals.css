@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/*
+ * The Inside palette. Near-monochrome blue-grey with exactly one warm accent,
+ * used for practical lights in the game and for links and rules on /cv.
+ * Shared by the 3D world (via src/game/fx/palette.ts) and the DOM.
+ */
+:root {
+  --void: #0a0c0f;
+  --mid: #1a2026;
+  --edge: #2a333c;
+  --muted: #7b8794;
+  --text: #c9d2da;
+  --accent: #e8a33d;
+}
+
+@theme inline {
+  --color-void: var(--void);
+  --color-mid: var(--mid);
+  --color-edge: var(--edge);
+  --color-muted: var(--muted);
+  --color-text: var(--text);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--void);
+  color: var(--text);
+}
+
+/* The canvas owns the whole viewport and must never scroll or rubber-band. */
+body:has(canvas[data-game]) {
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+/* The interaction prompt. It has to compete with a dark, busy 3D scene without
+   turning into a HUD, so it rises into place once and then breathes. */
+@keyframes prompt-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes key-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 0.4rem color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-prompt],
+  [data-prompt-key] {
+    animation: none !important;
+  }
+}
