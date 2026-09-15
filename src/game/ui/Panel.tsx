@@ -186,32 +186,44 @@ function BookPanel({ id }: { id: string }) {
   return (
     <article>
       <Heading title={book.title} sub={book.subtitle} />
-      <p className="mt-4 text-sm">
+
+      <p className="mt-3 flex flex-wrap items-center gap-x-3 font-mono text-xs uppercase tracking-wider text-muted">
         <span
-          className="inline-block h-3 w-3 rounded-sm align-middle"
+          className="inline-block h-3 w-3 rounded-sm"
           style={{ background: book.color }}
           aria-hidden
         />
-        <span className="ml-2 align-middle text-muted">
-          {book.status === "published" ? "Published" : "In progress"}
-        </span>
+        <span>{book.format === "paperback" ? "Paperback" : "Kindle"}</span>
+        {book.language === "es" && <span>Spanish edition</span>}
       </p>
-      {book.asin && (
-        <p className="mt-4 font-mono text-sm">
-          <span className="text-muted">Kindle: </span>
-          {MARKETPLACES.map((market) => (
-            <a
-              key={market}
-              href={kindleLink(book.asin!, market)}
-              target="_blank"
-              rel="noreferrer"
-              className="mr-2 text-muted hover:text-accent"
-            >
-              {market.toUpperCase()}
-            </a>
-          ))}
-        </p>
-      )}
+
+      <p className="mt-5 leading-relaxed text-text/90">{book.excerpt}</p>
+
+      <p className="mt-6">
+        <a
+          href={kindleLink(book.asin, "us")}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-block rounded bg-accent px-4 py-2 text-xs font-semibold uppercase tracking-wider text-void"
+        >
+          Read it on Amazon
+        </a>
+      </p>
+
+      <p className="mt-3 font-mono text-xs text-muted">
+        Also in{" "}
+        {MARKETPLACES.filter((m) => m !== "us").map((market) => (
+          <a
+            key={market}
+            href={kindleLink(book.asin, market)}
+            target="_blank"
+            rel="noreferrer"
+            className="mr-2 hover:text-accent"
+          >
+            {market.toUpperCase()}
+          </a>
+        ))}
+      </p>
     </article>
   );
 }
@@ -330,40 +342,45 @@ function ContactPanel() {
 }
 
 /** The whole shelf, for a hotspot that marks the library rather than a book. */
+/** The whole shelf, for a hotspot that marks the library rather than a book. */
 function BooksPanel() {
   return (
     <article>
-      <Heading title="Written" sub={`${BOOKS.length} books`} />
-      <ul className="mt-5 space-y-3">
+      <Heading title="Written" sub={`${BOOKS.length} books, all on Amazon`} />
+
+      <ul className="mt-5 space-y-6">
         {BOOKS.map((book) => (
-          <li key={book.id} className="flex flex-wrap items-baseline gap-x-3">
-            <span
-              className="inline-block h-3 w-3 shrink-0 rounded-sm"
-              style={{ background: book.color }}
-              aria-hidden
-            />
-            <span className="font-medium text-text">{book.title}</span>
-            <span className="font-mono text-xs text-muted">
-              {book.status === "published" ? "Published" : "In progress"}
-            </span>
-            {book.asin && (
-              <span className="font-mono text-xs">
-                {MARKETPLACES.map((market) => (
-                  <a
-                    key={market}
-                    href={kindleLink(book.asin!, market)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mr-1.5 text-muted hover:text-accent"
-                  >
-                    {market.toUpperCase()}
-                  </a>
-                ))}
-              </span>
+          <li key={book.id}>
+            <p className="flex flex-wrap items-baseline gap-x-3">
+              <span
+                className="inline-block h-3 w-3 shrink-0 rounded-sm"
+                style={{ background: book.color }}
+                aria-hidden
+              />
+              <a
+                href={kindleLink(book.asin, "us")}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-text underline decoration-edge underline-offset-4 hover:text-accent hover:decoration-accent"
+              >
+                {book.title}
+              </a>
+              {book.language === "es" && (
+                <span className="font-mono text-xs uppercase tracking-wider text-muted">
+                  Spanish
+                </span>
+              )}
+            </p>
+            {book.subtitle && (
+              <p className="mt-0.5 pl-6 text-sm text-muted">{book.subtitle}</p>
             )}
+            <p className="mt-1.5 pl-6 text-sm leading-relaxed text-text/80">
+              {book.excerpt}
+            </p>
           </li>
         ))}
       </ul>
+
       <p className="mt-6 border-t border-edge pt-4 text-sm text-muted">
         Collected from the podcasts: {VOLUMES.length} volumes of{" "}
         <em>En 20 Minutos</em>.
@@ -372,7 +389,6 @@ function BooksPanel() {
   );
 }
 
-/** All six shows, for a hotspot that marks the studio rather than one of them. */
 function ShowsPanel() {
   return (
     <article>

@@ -394,7 +394,7 @@ function library(): Building[] {
       color: C.marble,
       accent: book.color,
       label: book.title,
-      sub: book.status === "published" ? "Published" : "In progress",
+      sub: book.subtitle,
     })),
   ];
 }

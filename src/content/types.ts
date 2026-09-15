@@ -102,11 +102,17 @@ export interface Book {
   id: string;
   title: string;
   subtitle?: string;
+  /**
+   * A few sentences, in the book's own voice — the hook, not the blurb.
+   * A full back cover is more than anyone reads standing in a panel.
+   */
+  excerpt: string;
   /** Spine colour — how one book is told from another at map distance. */
   color: string;
-  status: "published" | "in-progress";
-  /** Present once it is on sale. */
-  asin?: string;
+  asin: string;
+  format: "kindle" | "paperback";
+  /** Omitted for English. The essay is Spanish and says so. */
+  language?: "es";
 }
 
 /** A collected volume of podcast episodes, shown at the studio. */

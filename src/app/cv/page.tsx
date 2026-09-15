@@ -6,7 +6,6 @@ import {
   EXPERIENCE,
   INTERESTS,
   LANGUAGES,
-  MARKETPLACES,
   PROFILE,
   PROJECTS,
   SHOWS,
@@ -204,27 +203,26 @@ export default function CvPage() {
       </Section>
 
       <Section title="Books">
-        <ul className="space-y-3">
-          {BOOKS.map((b) => (
-            <li key={b.id} className="flex flex-wrap items-baseline gap-x-3">
-              <span className="font-medium">{b.title}</span>
-              {b.asin ? (
-                <span className="font-mono text-sm">
-                  {MARKETPLACES.map((m) => (
-                    <a
-                      key={m}
-                      href={kindleLink(b.asin!, m)}
-                      className="mr-2 text-muted hover:text-accent"
-                    >
-                      {m.toUpperCase()}
-                    </a>
-                  ))}
-                </span>
-              ) : (
-                <span className="font-mono text-sm text-muted">
-                  not yet published
-                </span>
+        <ul className="space-y-6">
+          {BOOKS.map((book) => (
+            <li key={book.id}>
+              <h3 className="font-medium">
+                <a
+                  href={kindleLink(book.asin, "us")}
+                  className="text-accent underline underline-offset-4"
+                >
+                  {book.title}
+                </a>
+                {book.language === "es" && (
+                  <span className="ml-2 font-mono text-xs uppercase tracking-wider text-muted">
+                    Spanish
+                  </span>
+                )}
+              </h3>
+              {book.subtitle && (
+                <p className="mt-0.5 text-sm text-muted">{book.subtitle}</p>
               )}
+              <p className="mt-1.5 leading-relaxed text-text/85">{book.excerpt}</p>
             </li>
           ))}
         </ul>
