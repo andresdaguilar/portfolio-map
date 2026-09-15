@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 import { DoubleSide } from "three";
+import { Block } from "./Block";
+import { Model, type ModelName, preloadKit } from "./Model";
 import { overlapsCircle } from "../core/nav";
 import { BRIDGES, ISLANDS, island } from "../world/islands";
 import { BLOCKERS, LANDINGS, RAILINGS, RAIL_HEIGHT } from "../world/map";
@@ -15,7 +17,9 @@ import { BLOCKERS, LANDINGS, RAILINGS, RAIL_HEIGHT } from "../world/map";
  * read as holes cut in a green plane rather than as land above water.
  */
 
-const GRASS = "#7d9560";
+// Tuned against the model kit's own foliage greens, so the planting sits on
+// the ground rather than floating over a differently-coloured lawn.
+const GRASS = "#74a05a";
 const ROCK = "#6b6a63";
 const ROCK_DARK = "#54544f";
 const STONE = "#c2b79f";
@@ -36,24 +40,9 @@ function mulberry(seed: number) {
   };
 }
 
-function Tree({ x, z, scale }: { x: number; z: number; scale: number }) {
-  return (
-    <group position={[x, 0, z]} scale={scale}>
-      <mesh position={[0, 0.5, 0]} castShadow>
-        <cylinderGeometry args={[0.13, 0.18, 1, 6]} />
-        <meshStandardMaterial color="#6b513a" roughness={1} />
-      </mesh>
-      <mesh position={[0, 1.6, 0]} castShadow>
-        <coneGeometry args={[0.95, 2.2, 7]} />
-        <meshStandardMaterial color="#4f7040" roughness={1} flatShading />
-      </mesh>
-      <mesh position={[0, 2.45, 0]} castShadow>
-        <coneGeometry args={[0.68, 1.5, 7]} />
-        <meshStandardMaterial color="#5a7d48" roughness={1} flatShading />
-      </mesh>
-    </group>
-  );
-}
+const TREES: ModelName[] = ["tree_default", "tree_oak", "tree_fat", "tree_detailed"];
+const BUSHES: ModelName[] = ["plant_bush", "plant_bushDetailed", "plant_bushSmall"];
+const ROCKS: ModelName[] = ["rock_smallA", "rock_tallA", "rock_smallA"];
 
 function Bridge({
   from,
@@ -74,10 +63,9 @@ function Bridge({
       position={[(from.x + to.x) / 2, 0, (from.z + to.z) / 2]}
       rotation={[0, angle, 0]}
     >
-      <mesh position={[0, -0.08, 0]} receiveShadow castShadow>
-        <boxGeometry args={[width, 0.24, length]} />
+      <Block args={[width, 0.24, length]} position={[0, -0.08, 0]} receiveShadow castShadow>
         <meshStandardMaterial color={PLANK} roughness={1} />
-      </mesh>
+      </Block>
       {/* Handrails down both sides. */}
       {[-width / 2 + 0.12, width / 2 - 0.12].map((side) => (
         <group key={side}>
@@ -104,40 +92,58 @@ function Bridge({
   );
 }
 
+preloadKit([...TREES, ...BUSHES, ...ROCKS]);
+
 export function Terrain() {
-  const trees = useMemo(() => {
+  /**
+   * Trees, bushes and boulders around the rim of each island.
+   *
+   * Scattered deterministically so the planting does not rearrange itself on
+   * every reload, and kept to the edges: the middle of an island belongs to
+   * whatever the island is for.
+   */
+  const planting = useMemo(() => {
     const random = mulberry(20260915);
-    const out: Array<{ x: number; z: number; scale: number }> = [];
+    type Placed = { x: number; z: number; scale: number; seed: number };
+    const trees: Placed[] = [];
+    const bushes: Placed[] = [];
+    const rocks: Placed[] = [];
+
+    const clear = (x: number, z: number, radius: number) =>
+      !BLOCKERS.some((b) => overlapsCircle(b, x, z, radius)) &&
+      !LANDINGS.some((l) => Math.abs(l.x - x) < 4 && Math.abs(l.z - z) < 4) &&
+      !trees.some((t) => Math.hypot(t.x - x, t.z - z) < 2.4) &&
+      !bushes.some((t) => Math.hypot(t.x - x, t.z - z) < 1.3);
 
     for (const isle of ISLANDS) {
-      if (isle.id === "plaza") continue;
       let attempts = 0;
       let placed = 0;
+      const want = isle.id === "plaza" ? 4 : 13;
 
-      while (placed < 16 && attempts < 600) {
+      while (placed < want && attempts < 700) {
         attempts += 1;
-        const x = isle.x - isle.w / 2 + 1.5 + random() * (isle.w - 3);
-        const z = isle.z - isle.d / 2 + 1.5 + random() * (isle.d - 3);
+        const x = isle.x - isle.w / 2 + 1 + random() * (isle.w - 2);
+        const z = isle.z - isle.d / 2 + 1 + random() * (isle.d - 2);
 
-        // Trees line the edges; the middle belongs to whatever the island is for.
-        const edge =
-          Math.min(
-            Math.abs(x - (isle.x - isle.w / 2)),
-            Math.abs(x - (isle.x + isle.w / 2)),
-            Math.abs(z - (isle.z - isle.d / 2)),
-            Math.abs(z - (isle.z + isle.d / 2)),
-          ) < 3.2;
-        if (!edge) continue;
+        const fromEdge = Math.min(
+          Math.abs(x - (isle.x - isle.w / 2)),
+          Math.abs(x + 0 - (isle.x + isle.w / 2)),
+          Math.abs(z - (isle.z - isle.d / 2)),
+          Math.abs(z - (isle.z + isle.d / 2)),
+        );
+        if (fromEdge > 2.8) continue;
+        if (!clear(x, z, 2)) continue;
 
-        if (BLOCKERS.some((b) => overlapsCircle(b, x, z, 2.6))) continue;
-        if (LANDINGS.some((l) => Math.abs(l.x - x) < 5 && Math.abs(l.z - z) < 5)) continue;
-        if (out.some((t) => Math.hypot(t.x - x, t.z - z) < 3)) continue;
-
-        out.push({ x, z, scale: 0.7 + random() * 0.5 });
+        const roll = random();
+        const placement = { x, z, scale: 0.7 + random() * 0.6, seed: random() };
+        if (roll < 0.55) trees.push(placement);
+        else if (roll < 0.82) bushes.push(placement);
+        else rocks.push(placement);
         placed += 1;
       }
     }
-    return out;
+
+    return { trees, bushes, rocks };
   }, []);
 
   const plaza = island("plaza");
@@ -152,11 +158,27 @@ export function Terrain() {
 
       {ISLANDS.map((isle) => (
         <group key={isle.id} position={[isle.x, 0, isle.z]}>
-          {/* The rock the island is cut from. */}
-          <mesh position={[0, -ISLAND_DEPTH / 2, 0]} castShadow receiveShadow>
-            <boxGeometry args={[isle.w, ISLAND_DEPTH, isle.d]} />
+          {/* The rock the island is cut from, inset so the turf above it
+              overhangs and casts a line of shade around the rim. */}
+          <Block
+            args={[isle.w - 1.2, ISLAND_DEPTH, isle.d - 1.2]}
+            radius={0.5}
+            position={[0, -ISLAND_DEPTH / 2 - 0.15, 0]}
+            castShadow
+            receiveShadow
+          >
             <meshStandardMaterial color={ROCK} roughness={1} flatShading />
-          </mesh>
+          </Block>
+          {/* The turf slab. */}
+          <Block
+            args={[isle.w, 0.5, isle.d]}
+            radius={0.22}
+            position={[0, -0.25, 0]}
+            castShadow
+            receiveShadow
+          >
+            <meshStandardMaterial color={GRASS} roughness={1} />
+          </Block>
           {/* The keel underneath. This is what makes it float rather than sit. */}
           <mesh
             position={[0, -ISLAND_DEPTH - 3.5, 0]}
@@ -166,11 +188,7 @@ export function Terrain() {
             <coneGeometry args={[Math.min(isle.w, isle.d) * 0.55, 7, 4]} />
             <meshStandardMaterial color={ROCK_DARK} roughness={1} flatShading />
           </mesh>
-          {/* Grass. */}
-          <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-            <planeGeometry args={[isle.w, isle.d]} />
-            <meshStandardMaterial color={GRASS} roughness={1} />
-          </mesh>
+
         </group>
       ))}
 
@@ -201,10 +219,15 @@ export function Terrain() {
       {/* The career terrace: cut stone, each landing a step above the last. */}
       {LANDINGS.map((landing) => (
         <group key={landing.id} position={[landing.x, 0, landing.z]}>
-          <mesh position={[0, landing.y / 2 + 0.02, 0]} castShadow receiveShadow>
-            <boxGeometry args={[landing.size, Math.max(landing.y, 0.16), landing.size]} />
+          <Block
+            args={[landing.size, Math.max(landing.y, 0.18) + 0.3, landing.size]}
+            radius={0.1}
+            position={[0, (Math.max(landing.y, 0.18) + 0.3) / 2 - 0.3, 0]}
+            castShadow
+            receiveShadow
+          >
             <meshStandardMaterial color={STONE_EDGE} roughness={1} />
-          </mesh>
+          </Block>
           <mesh
             position={[0, landing.y + 0.06, 0]}
             rotation={[-Math.PI / 2, 0, 0]}
@@ -220,20 +243,50 @@ export function Terrain() {
         const landing = LANDINGS.find((l) => rail.id?.includes(l.id));
         const y = landing?.y ?? 0;
         return (
-          <mesh
+          <Block
             key={rail.id}
+            args={[rail.w, RAIL_HEIGHT, rail.d]}
             position={[rail.x + rail.w / 2, y + RAIL_HEIGHT / 2, rail.z + rail.d / 2]}
             castShadow
             receiveShadow
           >
-            <boxGeometry args={[rail.w, RAIL_HEIGHT, rail.d]} />
             <meshStandardMaterial color={STONE_EDGE} roughness={1} />
-          </mesh>
+          </Block>
         );
       })}
 
-      {trees.map((tree, i) => (
-        <Tree key={i} {...tree} />
+      {/* Planting, from the model kit. Real foliage rather than stacked
+          spheres is most of the difference between a diagram and a diorama,
+          and at 9KB a model it costs less than the code it replaced. */}
+      {planting.trees.map((tree, i) => (
+        <Model
+          key={`t${i}`}
+          name={TREES[i % TREES.length]}
+          fit={{ height: 2.4 + tree.scale * 1.1 }}
+          position={[tree.x, 0, tree.z]}
+          rotation={[0, tree.seed * 6, 0]}
+        />
+      ))}
+      {planting.bushes.map((bush, i) => (
+        <Model
+          key={`b${i}`}
+          name={BUSHES[i % BUSHES.length]}
+          fit={{ height: 0.45 + bush.scale * 0.35 }}
+          position={[bush.x, 0, bush.z]}
+          rotation={[0, bush.seed * 6, 0]}
+        />
+      ))}
+      {planting.rocks.map((rock, i) => (
+        <Model
+          key={`r${i}`}
+          name={ROCKS[i % ROCKS.length]}
+          // Rocks are fitted by width, not height: some of them are broad and
+          // flat, and matching their height blows them up into slabs wider
+          // than the island they sit on.
+          fit={{ width: 0.7 + rock.scale * 0.8 }}
+          position={[rock.x, 0, rock.z]}
+          rotation={[0, rock.seed * 6, 0]}
+        />
       ))}
     </group>
   );

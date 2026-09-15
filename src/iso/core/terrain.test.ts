@@ -61,9 +61,12 @@ describe("the terrace", () => {
     // The terrace's arms follow the world grid, which the isometric camera
     // turns 45 degrees on screen — so climbing is a diagonal press, exactly as
     // it is in every game of this kind. Up-and-right runs straight up the arm.
+    const firstArm = LANDINGS.filter((l) => l.arm === "first");
+    const topOfArm = firstArm[firstArm.length - 1].y;
+
     placeWalker(LANDINGS[0].x, LANDINGS[0].z + 3);
     walk(1, 1, 6);
-    expect(walker.y).toBeGreaterThan(1.5);
+    expect(walker.y).toBeCloseTo(topOfArm, 1);
   });
 
   it("keeps climbing around the corner onto the second arm", () => {

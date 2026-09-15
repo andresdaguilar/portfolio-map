@@ -8,6 +8,8 @@ import { makeTextTexture } from "@/game/world/kit/textTexture";
 import { ISO_CAMERA } from "../core/constants";
 import { walker } from "../player/walker";
 import { C, type Building } from "../world/map";
+import { Block } from "./Block";
+import { Model } from "./Model";
 
 /**
  * Everything that stands on the islands, built from primitives.
@@ -25,7 +27,7 @@ import { C, type Building } from "../world/map";
  * apart, so anything much beyond that has three signs shouting at once and the
  * map turns back into a labelled diagram.
  */
-const LABEL_RANGE = 6.5;
+const LABEL_RANGE = 4.2;
 
 /** Text on a surface, squared up to the camera, which never rotates. */
 function Printed({
@@ -150,52 +152,40 @@ export function Structure({ building }: { building: Building }) {
   const body = (() => {
     switch (kind) {
       /** A workplace: desk, monitor, chair. One per step of the career. */
+      /**
+       * A workplace: desk, chair, monitor, keyboard. One per step of the
+       * career. Modelled pieces rather than assembled boxes — this is the
+       * prop the visitor gets closest to, and it repeats eight times.
+       */
       case "desk": {
-        // The footprint is swapped for the rotated leg; the mesh is always
-        // built long-side-first and turned by the group above it.
-        const dw = rotation === 0 ? w : d;
-        const dd = rotation === 0 ? d : w;
+        const long = rotation === 0 ? w : d;
         return (
           <group rotation={faceCamera}>
-            <mesh position={[0, h * 0.55, 0]} castShadow receiveShadow>
-              <boxGeometry args={[dw, 0.12, dd]} />
-              <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
-            {[-dw / 2 + 0.15, dw / 2 - 0.15].map((lx) => (
-              <mesh key={lx} position={[lx, h * 0.28, 0]} castShadow>
-                <boxGeometry args={[0.12, h * 0.55, dd * 0.9]} />
-                <meshStandardMaterial color={C.timberDark} roughness={1} />
-              </mesh>
-            ))}
-            {/* Monitor. */}
-            <mesh position={[0, h * 0.68, -dd * 0.2]} castShadow>
-              <boxGeometry args={[0.1, 0.28, 0.1]} />
-              <meshStandardMaterial color={C.ink} roughness={0.8} />
-            </mesh>
-            <group position={[0, h * 0.98, -dd * 0.2]}>
-              <mesh castShadow>
-                <boxGeometry args={[1.5, 0.85, 0.08]} />
-                <meshStandardMaterial color={C.ink} roughness={0.7} />
-              </mesh>
-              <group position={[0, 0, 0.05]}>
-                <Screen w={1.35} h={0.72} color={warm} />
-              </group>
-            </group>
-            {/* Chair. */}
-            <group position={[0, 0, dd * 0.95]}>
-              <mesh position={[0, h * 0.42, 0]} castShadow>
-                <boxGeometry args={[0.85, 0.12, 0.8]} />
-                <meshStandardMaterial color={C.ink} roughness={1} />
-              </mesh>
-              <mesh position={[0, h * 0.75, 0.35]} castShadow>
-                <boxGeometry args={[0.85, 0.7, 0.12]} />
-                <meshStandardMaterial color={C.ink} roughness={1} />
-              </mesh>
-              <mesh position={[0, h * 0.2, 0]} castShadow>
-                <cylinderGeometry args={[0.07, 0.07, h * 0.45, 8]} />
-                <meshStandardMaterial color={C.slate} roughness={0.7} />
-              </mesh>
-            </group>
+            <Model name="desk" fit={{ width: long }} />
+            <Model
+              name="computerScreen"
+              fit={{ height: h * 0.55 }}
+              position={[0, h * 0.62, -0.18]}
+            />
+            <Model
+              name="computerKeyboard"
+              fit={{ width: long * 0.34 }}
+              position={[0, h * 0.62, 0.22]}
+            />
+            <Model
+              name="chairDesk"
+              fit={{ height: h * 0.8 }}
+              position={[0, 0, long * 0.62]}
+              rotation={[0, Math.PI, 0]}
+            />
+            {/* The room's colour, thrown by the screen. */}
+            <pointLight
+              color={warm}
+              intensity={2.4}
+              distance={3.4}
+              decay={2}
+              position={[0, h * 0.75, 0.1]}
+            />
           </group>
         );
       }
@@ -206,10 +196,9 @@ export function Structure({ building }: { building: Building }) {
         const pd = rotation === 0 ? d : w;
         return (
           <group rotation={faceCamera}>
-            <mesh position={[0, h * 0.5, 0]} castShadow receiveShadow>
-              <boxGeometry args={[pw, h, pd]} />
+            <Block args={[pw, h, pd]} position={[0, h * 0.5, 0]} castShadow receiveShadow>
               <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
+            </Block>
             <group position={[0, h * 0.62, pd / 2 + 0.01]} rotation={[-Math.PI / 12, 0, 0]}>
               <mesh position={[0, 0, -0.01]}>
                 <planeGeometry args={[pw * 0.88, h * 0.5]} />
@@ -227,14 +216,18 @@ export function Structure({ building }: { building: Building }) {
       case "university":
         return (
           <group>
-            <mesh position={[0, 0.25, 0]} receiveShadow castShadow>
-              <boxGeometry args={[w + 3, 0.5, d + 3]} />
+            <Block args={[w + 3, 0.5, d + 3]} radius={0.16} position={[0, 0.25, 0]} receiveShadow castShadow>
               <meshStandardMaterial color={C.stone} roughness={1} />
-            </mesh>
-            <mesh position={[0, h * 0.42, -d * 0.15]} castShadow receiveShadow>
-              <boxGeometry args={[w * 0.8, h * 0.7, d * 0.8]} />
+            </Block>
+            <Block
+              args={[w * 0.8, h * 0.7, d * 0.8]}
+              radius={0.18}
+              position={[0, h * 0.42, -d * 0.15]}
+              castShadow
+              receiveShadow
+            >
               <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
+            </Block>
             {/* Columns across the front. */}
             {Array.from({ length: 7 }, (_, i) => (
               <mesh
@@ -247,10 +240,9 @@ export function Structure({ building }: { building: Building }) {
               </mesh>
             ))}
             {/* Pediment carrying the degree. */}
-            <mesh position={[0, h * 0.82, d / 2 - 0.4]} castShadow>
-              <boxGeometry args={[w, h * 0.22, 1.4]} />
+            <Block args={[w, h * 0.22, 1.4]} radius={0.08} position={[0, h * 0.82, d / 2 - 0.4]} castShadow>
               <meshStandardMaterial color={C.marble} roughness={1} />
-            </mesh>
+            </Block>
             <group position={[0, h * 0.82, d / 2 + 0.32]}>
               <Printed text={label ?? ""} width={w * 0.82} />
             </group>
@@ -336,10 +328,9 @@ export function Structure({ building }: { building: Building }) {
       case "acoustic":
         return (
           <group rotation={faceCamera}>
-            <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
-              <boxGeometry args={[w, h, d]} />
+            <Block args={[w, h, d]} radius={0.1} position={[0, h / 2, 0]} castShadow receiveShadow>
               <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
+            </Block>
             {Array.from({ length: 14 }, (_, i) => (
               <mesh
                 key={i}
@@ -399,10 +390,9 @@ export function Structure({ building }: { building: Building }) {
               <boxGeometry args={[w + 0.4, 0.2, d + 0.4]} />
               <meshStandardMaterial color={color} roughness={1} />
             </mesh>
-            <mesh position={[0, h / 2, 0]} castShadow>
-              <boxGeometry args={[w, h, d]} />
+            <Block args={[w, h, d]} position={[0, h / 2, 0]} castShadow>
               <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
+            </Block>
             <mesh position={[0, h * 0.68, d / 2 + 0.01]}>
               <planeGeometry args={[w * 0.82, h * 0.5]} />
               <meshStandardMaterial color={warm} emissive={warm} emissiveIntensity={0.5} />
@@ -414,10 +404,9 @@ export function Structure({ building }: { building: Building }) {
       case "bookcase":
         return (
           <group rotation={faceCamera}>
-            <mesh position={[0, h / 2, -d / 2]} castShadow receiveShadow>
-              <boxGeometry args={[w, h, 0.2]} />
+            <Block args={[w, h, 0.2]} position={[0, h / 2, -d / 2]} castShadow receiveShadow>
               <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
+            </Block>
             {[0.5, 1.4, 2.3, 3.2].map((shelfY) => (
               <group key={shelfY}>
                 <mesh position={[0, shelfY, 0]} castShadow>
@@ -453,10 +442,9 @@ export function Structure({ building }: { building: Building }) {
       case "book-display":
         return (
           <group rotation={faceCamera}>
-            <mesh position={[0, h * 0.85, 0]} castShadow receiveShadow>
-              <boxGeometry args={[w, 0.14, d]} />
+            <Block args={[w, 0.14, d]} position={[0, h * 0.85, 0]} castShadow receiveShadow>
               <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
+            </Block>
             {[-w / 2 + 0.3, w / 2 - 0.3].map((lx) => (
               <mesh key={lx} position={[lx, h * 0.42, 0]} castShadow>
                 <boxGeometry args={[0.16, h * 0.85, d * 0.8]} />
@@ -485,14 +473,12 @@ export function Structure({ building }: { building: Building }) {
       case "armchair":
         return (
           <group rotation={faceCamera}>
-            <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
-              <boxGeometry args={[w, 0.45, d]} />
+            <Block args={[w, 0.45, d]} radius={0.1} position={[0, 0.45, 0]} castShadow receiveShadow>
               <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
-            <mesh position={[0, 0.95, -d / 2 + 0.2]} castShadow>
-              <boxGeometry args={[w, 1.1, 0.35]} />
+            </Block>
+            <Block args={[w, 1.1, 0.35]} radius={0.1} position={[0, 0.95, -d / 2 + 0.2]} castShadow>
               <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
+            </Block>
             {[-w / 2 + 0.18, w / 2 - 0.18].map((lx) => (
               <mesh key={lx} position={[lx, 0.8, 0]} castShadow>
                 <boxGeometry args={[0.32, 0.5, d * 0.9]} />
@@ -512,10 +498,9 @@ export function Structure({ building }: { building: Building }) {
                 <meshStandardMaterial color={C.slate} roughness={0.9} />
               </mesh>
             ))}
-            <mesh position={[0, h * 0.72, 0]} castShadow receiveShadow>
-              <boxGeometry args={[w, h * 0.56, d]} />
+            <Block args={[w, h * 0.56, d]} radius={0.07} position={[0, h * 0.72, 0]} castShadow receiveShadow>
               <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
+            </Block>
             <group position={[0, h * 0.78, d / 2 + 0.02]}>
               <Screen w={w * 0.82} h={h * 0.3} color={warm} />
             </group>
@@ -580,10 +565,9 @@ export function Structure({ building }: { building: Building }) {
       case "bench":
         return (
           <group rotation={faceCamera}>
-            <mesh position={[0, h, 0]} castShadow receiveShadow>
-              <boxGeometry args={[w, 0.2, d]} />
+            <Block args={[w, 0.2, d]} radius={0.05} position={[0, h, 0]} castShadow receiveShadow>
               <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
+            </Block>
             {[-w / 2 + 0.2, w / 2 - 0.2].map((lx) => (
               <mesh key={lx} position={[lx, h / 2, 0]} castShadow>
                 <boxGeometry args={[0.14, h, 0.14]} />
@@ -596,10 +580,9 @@ export function Structure({ building }: { building: Building }) {
       case "piano":
         return (
           <group rotation={faceCamera}>
-            <mesh position={[0, h * 0.75, 0]} castShadow receiveShadow>
-              <boxGeometry args={[w, 0.3, d]} />
+            <Block args={[w, 0.3, d]} radius={0.06} position={[0, h * 0.75, 0]} castShadow receiveShadow>
               <meshStandardMaterial color={color} roughness={0.5} />
-            </mesh>
+            </Block>
             {/* Keys. */}
             <mesh position={[0, h * 0.92, d / 2 - 0.15]} rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[w * 0.92, 0.45]} />

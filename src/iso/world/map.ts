@@ -86,12 +86,26 @@ export const C = {
  * not that the climb is hard.
  */
 const TERRACE = {
-  landing: 7,
-  rise: 0.4,
-  x: -64,
-  z: 20,
-  firstArm: 5,
+  landing: 5.6,
+  rise: 0.34,
+  x: -48,
+  z: 15,
+  /** Four up, turn, four across: a squarer L that fits a compact island. */
+  firstArm: 4,
 } as const;
+
+const RAILING_HEIGHT = 0.55;
+const RAILING_THICKNESS = 0.4;
+
+/**
+ * Where the inside face of a landing's parapet sits, measured from its centre.
+ *
+ * The parapet straddles the landing edge, so it reaches inward by only half
+ * its thickness — not the whole of it. Getting that wrong leaves a slot a
+ * fraction narrower than the walker, which is the one width worse than no gap
+ * at all: you get wedged instead of walking past.
+ */
+export const RAIL_INNER_FACE = TERRACE.landing / 2 - RAILING_THICKNESS / 2;
 
 export interface Landing {
   id: string;
@@ -144,10 +158,12 @@ function terrace(): Building[] {
    * walker, which is worse than no gap at all — you get wedged instead of
    * walking past. Flush, the whole rest of the landing is one clear lane.
    */
-  const aside = 1.85;
-  const plaqueAside = 2.0;
-  const deskLong = 3;
-  const deskShort = 1.6;
+  // Flush against the parapet, derived rather than eyeballed.
+  const deskLongHalf = 1.1;
+  const aside = RAIL_INNER_FACE - deskLongHalf + 0.05;
+  const plaqueAside = 1.65;
+  const deskLong = deskLongHalf * 2;
+  const deskShort = 1.2;
 
   return LANDINGS.flatMap((l): Building[] => {
     // The first leg runs along Z and the second along X, so the furniture
@@ -165,7 +181,7 @@ function terrace(): Building[] {
         z: alongZ ? l.z : l.z + aside,
         w: alongZ ? deskLong : deskShort,
         d: alongZ ? deskShort : deskLong,
-        h: 1.5,
+        h: 1.15,
         color: C.timber,
         accent: l.accent,
         label: l.company,
@@ -178,9 +194,9 @@ function terrace(): Building[] {
         x: alongZ ? l.x + plaqueAside : l.x,
         y: l.y,
         z: alongZ ? l.z : l.z - plaqueAside,
-        w: alongZ ? 1.8 : 0.4,
-        d: alongZ ? 0.4 : 1.8,
-        h: 0.95,
+        w: alongZ ? 1.5 : 0.35,
+        d: alongZ ? 0.35 : 1.5,
+        h: 0.75,
         color: C.stone,
         accent: l.accent,
         label: l.company,
@@ -203,10 +219,10 @@ function academy(): Building[] {
       kind: "university",
       x: i.x,
       y: 0,
-      z: i.z - 4,
-      w: 18,
-      d: 10,
-      h: 8,
+      z: i.z - 3.5,
+      w: 13,
+      d: 7.5,
+      h: 6,
       color: C.marble,
       accent: C.accent,
       label: degree.title,
@@ -217,10 +233,10 @@ function academy(): Building[] {
       kind: "fountain",
       x: i.x,
       y: 0,
-      z: i.z + 6,
-      w: 5,
-      d: 5,
-      h: 1.5,
+      z: i.z + 4.5,
+      w: 3.8,
+      d: 3.8,
+      h: 1.2,
       color: C.stone,
       accent: "#6fa8c7",
       label: "Fountain",
@@ -228,12 +244,12 @@ function academy(): Building[] {
     ...certificates.map((c, n): Building => ({
       id: c.id,
       kind: "monument",
-      x: i.x - 10 + n * 5,
+      x: i.x - 7.2 + n * 3.6,
       y: 0,
-      z: i.z + 11,
-      w: 1.4,
-      d: 1.4,
-      h: 2.2,
+      z: i.z + 8,
+      w: 1.1,
+      d: 1.1,
+      h: 1.7,
       color: C.marble,
       accent: C.accent,
       label: c.title,
@@ -253,10 +269,10 @@ function studio(): Building[] {
       kind: "acoustic",
       x: i.x,
       y: 0,
-      z: i.z - 8,
-      w: 16,
-      d: 0.6,
-      h: 5,
+      z: i.z - 7,
+      w: 12,
+      d: 0.5,
+      h: 3.8,
       color: C.timberDark,
       accent: C.accent,
       label: "On air",
@@ -268,9 +284,9 @@ function studio(): Building[] {
       x: i.x,
       y: 0,
       z: i.z - 2,
-      w: 5,
-      d: 5,
-      h: 1.1,
+      w: 3.8,
+      d: 3.8,
+      h: 0.85,
       color: C.timber,
       accent: C.ink,
       label: "The table",
@@ -279,12 +295,12 @@ function studio(): Building[] {
     {
       id: "console",
       kind: "console",
-      x: i.x + 8,
+      x: i.x + 7,
       y: 0,
       z: i.z - 2,
-      w: 3,
-      d: 1.6,
-      h: 1.1,
+      w: 2.4,
+      d: 1.3,
+      h: 0.9,
       color: C.slate,
       accent: "#7fd4a8",
       label: "The desk",
@@ -293,12 +309,12 @@ function studio(): Building[] {
     ...SHOWS.map((show, n): Building => ({
       id: show.id,
       kind: "totem",
-      x: i.x - 10 + n * 4,
+      x: i.x - 8 + n * 3.2,
       y: 0,
-      z: i.z + 8,
-      w: 2.4,
-      d: 0.5,
-      h: 3,
+      z: i.z + 7,
+      w: 1.9,
+      d: 0.45,
+      h: 2.3,
       color: C.slate,
       accent: show.color,
       label: show.nativeName,
@@ -307,12 +323,12 @@ function studio(): Building[] {
     ...VOLUMES.map((volume, n): Building => ({
       id: volume.id,
       kind: "monument",
-      x: i.x - 6 + n * 4,
+      x: i.x - 4.5 + n * 3,
       y: 0,
-      z: i.z + 3,
-      w: 1.2,
-      d: 0.9,
-      h: 0.9,
+      z: i.z + 2.6,
+      w: 1,
+      d: 0.75,
+      h: 0.7,
       color: C.marble,
       accent: SHOWS.find((s) => s.id === volume.show)?.color ?? C.accent,
       label: volume.title,
@@ -329,12 +345,12 @@ function library(): Building[] {
     ...[0, 1, 2].map((n): Building => ({
       id: `bookcase-${n}`,
       kind: "bookcase",
-      x: i.x - 9 + n * 9,
+      x: i.x - 7 + n * 7,
       y: 0,
-      z: i.z - 8,
-      w: 7,
-      d: 1.1,
-      h: 4.2,
+      z: i.z - 6.5,
+      w: 5.6,
+      d: 0.95,
+      h: 3.2,
       color: C.timberDark,
       accent: C.accent,
     })),
@@ -343,10 +359,10 @@ function library(): Building[] {
       kind: "book-display",
       x: i.x,
       y: 0,
-      z: i.z + 2,
-      w: 11,
-      d: 1.6,
-      h: 1.1,
+      z: i.z + 1.5,
+      w: 9,
+      d: 1.3,
+      h: 0.85,
       color: C.timber,
       accent: C.accent,
       label: "Written",
@@ -355,12 +371,12 @@ function library(): Building[] {
     {
       id: "armchair",
       kind: "armchair",
-      x: i.x + 8,
+      x: i.x + 7.5,
       y: 0,
-      z: i.z + 5,
-      w: 2.2,
-      d: 2.2,
-      h: 1.5,
+      z: i.z + 4.5,
+      w: 1.8,
+      d: 1.8,
+      h: 1.2,
       color: "#7a5c52",
       accent: C.accent,
       label: "Read",
@@ -369,12 +385,12 @@ function library(): Building[] {
     ...BOOKS.map((book, n): Building => ({
       id: book.id,
       kind: "monument",
-      x: i.x - 5 + (n % 3) * 5,
+      x: i.x - 4 + (n % 3) * 4,
       y: 0,
-      z: i.z + 7 + Math.floor(n / 3) * 3.5,
-      w: 1,
-      d: 0.8,
-      h: 0.8,
+      z: i.z + 4 + Math.floor(n / 3) * 2.8,
+      w: 0.85,
+      d: 0.7,
+      h: 0.65,
       color: C.marble,
       accent: book.color,
       label: book.title,
@@ -388,12 +404,12 @@ function library(): Building[] {
 function commons(): Building[] {
   const i = island("commons");
   return [
-    { id: "surf", kind: "surfboard", x: i.x - 8, y: 0, z: i.z - 5, w: 0.8, d: 0.4, h: 2.8, color: "#e8e3d6", accent: "#4f8fb0", label: "Surf" },
-    { id: "gym", kind: "weights", x: i.x - 3, y: 0, z: i.z - 5, w: 2.6, d: 1.2, h: 1.6, color: C.ink, accent: C.accent, label: "Gym" },
-    { id: "bench", kind: "bench", x: i.x - 3, y: 0, z: i.z - 1, w: 2.4, d: 1, h: 0.9, color: C.ink, accent: C.accent, label: "Bench" },
-    { id: "piano", kind: "piano", x: i.x + 5, y: 0, z: i.z - 4, w: 3.2, d: 1.4, h: 1.3, color: "#23282f", accent: C.marble, label: "Piano" },
-    { id: "tennis", kind: "rackets", x: i.x + 6, y: 0, z: i.z + 3, w: 1.6, d: 1, h: 1.2, color: C.timber, accent: "#d8e05a", label: "Tennis" },
-    { id: "mat", kind: "mat", x: i.x - 4, y: 0, z: i.z + 5, w: 3.4, d: 1.6, h: 0.1, color: "#5f8fa8", accent: "#e8e3d6", label: "Mat" },
+    { id: "surf", kind: "surfboard", x: i.x - 6.5, y: 0, z: i.z - 4, w: 0.7, d: 0.35, h: 2.2, color: "#e8e3d6", accent: "#4f8fb0", label: "Surf" },
+    { id: "gym", kind: "weights", x: i.x - 2.6, y: 0, z: i.z - 4.2, w: 2.1, d: 1, h: 1.25, color: C.ink, accent: C.accent, label: "Gym" },
+    { id: "bench", kind: "bench", x: i.x - 2.6, y: 0, z: i.z - 1, w: 2, d: 0.85, h: 0.7, color: C.ink, accent: C.accent, label: "Bench" },
+    { id: "piano", kind: "piano", x: i.x + 4.2, y: 0, z: i.z - 3.4, w: 2.6, d: 1.15, h: 1, color: "#23282f", accent: C.marble, label: "Piano" },
+    { id: "tennis", kind: "rackets", x: i.x + 5, y: 0, z: i.z + 2.6, w: 1.3, d: 0.85, h: 0.95, color: C.timber, accent: "#d8e05a", label: "Tennis" },
+    { id: "mat", kind: "mat", x: i.x - 3.4, y: 0, z: i.z + 4.2, w: 2.8, d: 1.3, h: 0.1, color: "#5f8fa8", accent: "#e8e3d6", label: "Mat" },
   ];
 }
 
@@ -402,7 +418,7 @@ function commons(): Building[] {
 function yards(): Building[] {
   const i = island("yards");
   const perRow = 5;
-  const spacing = 5.4;
+  const spacing = 4.4;
 
   return PROJECTS.map((project, n): Building => {
     const row = Math.floor(n / perRow);
@@ -438,7 +454,6 @@ export const BUILDINGS: Building[] = [
 /** Low or flat things are walked over, not into. */
 const WALKABLE: BuildingKind[] = ["plaque", "monument", "mat"];
 
-const RAILING_HEIGHT = 0.55;
 
 /**
  * Parapets around the open edges of the terrace.
@@ -452,7 +467,7 @@ function terraceRailings(): Footprint[] {
   const half = TERRACE.landing / 2;
   const key = (x: number, z: number) => `${Math.round(x)}:${Math.round(z)}`;
   const occupied = new Set(LANDINGS.map((l) => key(l.x, l.z)));
-  const thickness = 0.4;
+  const thickness = RAILING_THICKNESS;
   const out: Footprint[] = [];
 
   for (const landing of LANDINGS) {

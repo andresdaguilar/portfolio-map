@@ -47,10 +47,15 @@ export const ISO_CAMERA = {
 
 export const WALKER = {
   /** Collision is a circle, not a box: it slides along walls instead of catching. */
-  radius: 0.42,
-  height: 1.7,
-  walkSpeed: 5.4,
-  runSpeed: 8.6,
+  radius: 0.34,
+  /**
+   * Deliberately small against the buildings. The map is meant to be read as
+   * a model of a life seen from above, and a figure at full architectural
+   * scale turns it into a street you happen to be standing in.
+   */
+  height: 1.25,
+  walkSpeed: 5.2,
+  runSpeed: 8.8,
   runAfter: 0.5,
   accel: 34,
   brake: 26,

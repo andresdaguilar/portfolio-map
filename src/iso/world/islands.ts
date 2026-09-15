@@ -18,16 +18,22 @@ export interface Island {
   d: number;
 }
 
+/**
+ * Screen directions, given the camera's 45-degree yaw: -X is up-left on
+ * screen, -Z is up-right, +Z is down-left and +X is down-right.
+ *
+ * Kept tight on purpose. The whole point is that the map fits on screen at
+ * once, so every extra unit of water is a unit of nothing that has to be
+ * framed alongside the things worth looking at.
+ */
 export const ISLANDS: Island[] = [
-  { id: "plaza", x: 0, z: 0, w: 22, d: 22 },
-  // Screen directions, given the camera's 45-degree yaw: -X is up-left on
-  // screen, -Z is up-right, +Z is down-left and +X is down-right.
-  { id: "education", x: -26, z: -26, w: 34, d: 28 },
-  { id: "work", x: -54, z: 6, w: 38, d: 36 },
-  { id: "studio", x: 8, z: -54, w: 30, d: 28 },
-  { id: "library", x: -8, z: 46, w: 32, d: 26 },
-  { id: "commons", x: 32, z: 32, w: 28, d: 26 },
-  { id: "yards", x: 52, z: -6, w: 30, d: 32 },
+  { id: "plaza", x: 0, z: 0, w: 17, d: 17 },
+  { id: "education", x: -20, z: -20, w: 26, d: 21 },
+  { id: "work", x: -40, z: 5, w: 27, d: 27 },
+  { id: "studio", x: 6, z: -40, w: 23, d: 21 },
+  { id: "library", x: -6, z: 34, w: 25, d: 20 },
+  { id: "commons", x: 25, z: 25, w: 21, d: 20 },
+  { id: "yards", x: 39, z: -5, w: 23, d: 25 },
 ];
 
 export const island = (id: string) => ISLANDS.find((i) => i.id === id)!;
@@ -49,7 +55,7 @@ export function bridgePlatforms(
   id: string,
   from: { x: number; z: number },
   to: { x: number; z: number },
-  width = 4.4,
+  width = 3.6,
 ): Platform[] {
   const dx = to.x - from.x;
   const dz = to.z - from.z;
@@ -99,7 +105,7 @@ export const BRIDGES: Bridge[] = ISLANDS.filter((i) => i.id !== "plaza").map(
     id: `bridge-${target.id}`,
     from: edgeToward(plaza, target),
     to: edgeToward(target, plaza),
-    width: 4.4,
+    width: 3.6,
   }),
 );
 

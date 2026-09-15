@@ -7,7 +7,8 @@ import { useEffect } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { OrthographicCamera } from "three";
 import { ISO_CAMERA } from "./core/constants";
-import { factorForWheel, zoom, zoomBy } from "./core/zoom";
+import { factorForWheel, fitTo, zoom, zoomBy } from "./core/zoom";
+import { clampFocus, fitViewWidth } from "./core/view";
 import { walker } from "./player/walker";
 
 /**
@@ -35,14 +36,18 @@ export function IsoCamera() {
   const size = useThree((s) => s.size);
   const gl = useThree((s) => s.gl);
 
+  const aspect = size.width / Math.max(size.height, 1);
+
   useEffect(() => {
     if (!(camera instanceof OrthographicCamera)) return;
+    // Open on the whole archipelago, and make that the zoom-out limit.
+    fitTo(fitViewWidth(aspect));
     // In an orthographic projection zoom is pixels per world unit, so this is
-    // what actually decides how much town fits on screen — the camera's
+    // what actually decides how much map fits on screen — the camera's
     // distance only affects clipping.
     camera.zoom = size.width / zoom.viewWidth;
     camera.updateProjectionMatrix();
-  }, [camera, size.width, size.height]);
+  }, [camera, size.width, size.height, aspect]);
 
   useEffect(() => {
     const element = gl.domElement;
@@ -83,8 +88,13 @@ export function IsoCamera() {
       targetZ = currentZ + dz * pull;
     }
 
-    const nextX = damp(currentX, targetX, ISO_CAMERA.damping, dt);
-    const nextZ = damp(currentZ, targetZ, ISO_CAMERA.damping, dt);
+    // Never frame open water beyond the islands. Once the view holds the whole
+    // map this collapses to the centre, so fully zoomed out the camera simply
+    // rests over the archipelago.
+    const bounded = clampFocus(targetX, targetZ, zoom.viewWidth, aspect);
+
+    const nextX = damp(currentX, bounded.x, ISO_CAMERA.damping, dt);
+    const nextZ = damp(currentZ, bounded.z, ISO_CAMERA.damping, dt);
 
     const nextY = damp(currentY, walker.y, ISO_CAMERA.damping, dt);
 
