@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# The map artwork is large and belongs with the design, not the diff.
+# Comment this out if you want it version-controlled.
+/public/map/*.jpg
+/public/map/*.png

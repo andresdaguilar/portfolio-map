@@ -47,11 +47,18 @@ export function isWalkable(point: Point, shapes: readonly Shape[]): boolean {
   return onGround;
 }
 
-/** Squared distance, for comparisons that never need the square root. */
-function distanceSquared(a: Point, b: Point): number {
+/**
+ * Distance as seen on screen, expressed in units of image width.
+ *
+ * Normalised coordinates are not isotropic: one unit along x is `image.width`
+ * pixels and one along y is `image.height`. Comparing them directly makes a
+ * hotspot's catchment an ellipse squashed vertically — roughly half as tall as
+ * the circle drawn for it — so walking up to something from above misses it.
+ */
+function screenDistance(a: Point, b: Point, aspect: number): number {
   const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  return dx * dx + dy * dy;
+  const dy = (a.y - b.y) / aspect;
+  return Math.hypot(dx, dy);
 }
 
 /**
@@ -80,12 +87,13 @@ export function stepTowards(
 
 /** The hotspot the character is standing on, if any. */
 export function hotspotAt(point: Point, layout: MapLayout) {
+  const aspect = layout.image.width / (layout.image.height || 1);
   let best: MapLayout["hotspots"][number] | null = null;
   let bestDistance = Infinity;
 
   for (const hotspot of layout.hotspots) {
-    const distance = distanceSquared(point, hotspot.at);
-    if (distance > hotspot.radius * hotspot.radius) continue;
+    const distance = screenDistance(point, hotspot.at, aspect);
+    if (distance > hotspot.radius) continue;
     if (distance < bestDistance) {
       best = hotspot;
       bestDistance = distance;

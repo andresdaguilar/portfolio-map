@@ -14,12 +14,36 @@ const normalise = (value: string) =>
 const SECTIONS: Record<string, PanelTarget> = {
   education: { kind: "credentials" },
   certifications: { kind: "credentials" },
+  uai: { kind: "credentials" },
+  library: { kind: "books" },
+  books: { kind: "books" },
+  written: { kind: "books" },
+  podcast: { kind: "shows" },
+  studio: { kind: "shows" },
+  hobbies: { kind: "interests" },
   contact: { kind: "contact" },
   plaza: { kind: "contact" },
+  work: { kind: "contact" },
+};
+
+/**
+ * Shorthand used on the map that does not match anything in the content.
+ *
+ * Hotspots are named while looking at the picture, where space is tight and a
+ * company is "TG" — and where a typo in a label is invisible. Rather than
+ * making the map wrong, the few that drift are mapped here.
+ */
+const ALIASES: Record<string, string> = {
+  tg: "techgenies",
+  hp: "hp",
+  nutriciondek: "nutriciondesk",
+  ubisat: "ubisat",
+  imachinary: "imachinary",
 };
 
 export function targetForHotspot(id: string): PanelTarget {
-  const key = normalise(id);
+  const raw = normalise(id);
+  const key = ALIASES[raw] ?? raw;
 
   const job = EXPERIENCE.find(
     (e) => normalise(e.id) === key || normalise(e.company) === key,

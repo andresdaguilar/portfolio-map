@@ -11,6 +11,7 @@ import {
   PROJECTS,
   SHOWS,
   VOLUMES,
+  INTERESTS,
   formatRange,
   kindleLink,
 } from "@/content";
@@ -83,6 +84,9 @@ export function Panel() {
         {panel.kind === "volume" && <VolumePanel id={panel.id} />}
         {panel.kind === "show" && <ShowPanel id={panel.id} />}
         {panel.kind === "credentials" && <CredentialsPanel />}
+        {panel.kind === "books" && <BooksPanel />}
+        {panel.kind === "shows" && <ShowsPanel />}
+        {panel.kind === "interests" && <InterestsPanel />}
         {panel.kind === "contact" && <ContactPanel />}
 
         <button
@@ -318,6 +322,94 @@ function ContactPanel() {
             <a href={link.href} className="text-accent underline underline-offset-4">
               {link.text}
             </a>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+/** The whole shelf, for a hotspot that marks the library rather than a book. */
+function BooksPanel() {
+  return (
+    <article>
+      <Heading title="Written" sub={`${BOOKS.length} books`} />
+      <ul className="mt-5 space-y-3">
+        {BOOKS.map((book) => (
+          <li key={book.id} className="flex flex-wrap items-baseline gap-x-3">
+            <span
+              className="inline-block h-3 w-3 shrink-0 rounded-sm"
+              style={{ background: book.color }}
+              aria-hidden
+            />
+            <span className="font-medium text-text">{book.title}</span>
+            <span className="font-mono text-xs text-muted">
+              {book.status === "published" ? "Published" : "In progress"}
+            </span>
+            {book.asin && (
+              <span className="font-mono text-xs">
+                {MARKETPLACES.map((market) => (
+                  <a
+                    key={market}
+                    href={kindleLink(book.asin!, market)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mr-1.5 text-muted hover:text-accent"
+                  >
+                    {market.toUpperCase()}
+                  </a>
+                ))}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-6 border-t border-edge pt-4 text-sm text-muted">
+        Collected from the podcasts: {VOLUMES.length} volumes of{" "}
+        <em>En 20 Minutos</em>.
+      </p>
+    </article>
+  );
+}
+
+/** All six shows, for a hotspot that marks the studio rather than one of them. */
+function ShowsPanel() {
+  return (
+    <article>
+      <Heading
+        title="En 20 Minutos"
+        sub={`${SHOWS.length} shows · written, narrated and produced solo`}
+      />
+      <ul className="mt-5 space-y-3">
+        {SHOWS.map((show) => (
+          <li key={show.id}>
+            <p className="flex flex-wrap items-baseline gap-x-3">
+              <span
+                className="inline-block h-3 w-3 shrink-0 rounded-sm"
+                style={{ background: show.color }}
+                aria-hidden
+              />
+              <span className="font-medium text-text">{show.nativeName}</span>
+              <span className="font-mono text-xs text-muted">
+                {show.episodes} episodes
+              </span>
+            </p>
+            <p className="mt-0.5 pl-6 text-sm text-text/80">{show.summary}</p>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+function InterestsPanel() {
+  return (
+    <article>
+      <Heading title="Elsewhere" sub="Move · play · create · balance" />
+      <ul className="mt-5 space-y-2">
+        {INTERESTS.map((interest) => (
+          <li key={interest.id} className="text-text/90">
+            {interest.line}
           </li>
         ))}
       </ul>

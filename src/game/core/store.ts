@@ -11,6 +11,9 @@ export type PanelTarget =
   | { kind: "show"; id: string }
   | { kind: "book"; id: string }
   | { kind: "volume"; id: string }
+  | { kind: "books" }
+  | { kind: "shows" }
+  | { kind: "interests" }
   | { kind: "contact" }
   | { kind: "travel" }
   | null;

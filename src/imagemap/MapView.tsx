@@ -6,10 +6,13 @@ import { Panel } from "@/game/ui/Panel";
 import { useGame } from "@/game/core/store";
 import { advance, createCharacter, intentTowards, type Character } from "./character";
 import { drawCharacter } from "./drawCharacter";
+import { drawSprite, loadSprite, type Sprite } from "./sprite";
 import { firstWalkablePoint, hotspotAt } from "./geometry";
+import { buildGrid, findPath, smoothPath, type Grid } from "./pathfinding";
 import { targetForHotspot } from "./resolve";
 import rawLayout from "./layout.json";
 import type { MapLayout, Point } from "./types";
+import { MAP_IMAGE } from "./config";
 
 /**
  * The map, walked.
@@ -21,15 +24,21 @@ import type { MapLayout, Point } from "./types";
  */
 
 const layout = rawLayout as MapLayout;
-const IMAGE = "/map/map.png";
 
-/** Character height as a fraction of the image's height. */
-const CHARACTER_HEIGHT = 0.052;
+/**
+ * Character height as a fraction of the image's height.
+ *
+ * Sized against the scene rather than picked: at 0.08 the figure stands about
+ * as tall as the desks on the career terrace, which is what makes the map read
+ * as a place with a person in it rather than a board with a token on it.
+ */
+const CHARACTER_HEIGHT = 0.08;
 
 export function MapView() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [missing, setMissing] = useState(false);
+  const sprite = useRef<Sprite | null>(null);
   const [debug, setDebug] = useState(false);
 
   const paused = useGame((s) => s.paused);
@@ -44,14 +53,27 @@ export function MapView() {
     createCharacter(firstWalkablePoint(layout) ?? { x: 0.5, y: 0.5 }),
   );
   const keys = useRef(new Set<string>());
-  const target = useRef<Point | null>(null);
+  /** Waypoints left to walk, from a click. Empty when steering by hand. */
+  const route = useRef<Point[]>([]);
+  const grid = useRef<Grid | null>(null);
   const fit = useRef({ scale: 1, x: 0, y: 0 });
 
   useEffect(() => {
     const img = new Image();
     img.onload = () => setImage(img);
     img.onerror = () => setMissing(true);
-    img.src = IMAGE;
+    img.src = MAP_IMAGE;
+  }, []);
+
+  useEffect(() => {
+    let live = true;
+    // Quietly upgrades the figure if a drawn one has been supplied.
+    loadSprite().then((loaded) => {
+      if (live) sprite.current = loaded;
+    });
+    return () => {
+      live = false;
+    };
   }, []);
 
   /* --------------------------------------------------------------- input */
@@ -66,7 +88,7 @@ export function MapView() {
         e.preventDefault();
         keys.current.add(code);
         // Steering by hand overrides wherever the last click was headed.
-        target.current = null;
+        route.current = [];
       }
       if (code === "KeyE" || code === "Enter") {
         const near = useGame.getState().nearby;
@@ -138,14 +160,19 @@ export function MapView() {
             (held.has("ArrowUp") || held.has("KeyW") ? 1 : 0),
         };
 
-        const intent =
-          manual.x || manual.y
-            ? manual
-            : target.current
-              ? intentTowards(character.current.at, target.current, aspect)
-              : { x: 0, y: 0 };
-
-        if (target.current && intent.x === 0 && intent.y === 0) target.current = null;
+        let intent = manual;
+        if (!manual.x && !manual.y && route.current.length) {
+          // Waypoints are consumed as they are reached, so the last leg ends
+          // exactly where the click was rather than near it.
+          const next = route.current[0];
+          const towards = intentTowards(character.current.at, next, aspect, 0.006);
+          if (towards.x === 0 && towards.y === 0) {
+            route.current.shift();
+            intent = { x: 0, y: 0 };
+          } else {
+            intent = towards;
+          }
+        }
 
         character.current = advance(character.current, intent, dt, layout.shapes, aspect);
 
@@ -200,14 +227,16 @@ export function MapView() {
       }
 
       const feet = toCanvas(character.current.at);
-      drawCharacter(ctx, {
+      const drawn = {
         x: feet.x,
         y: feet.y,
         height: CHARACTER_HEIGHT * layout.image.height * scale,
         phase: character.current.phase,
         facing: character.current.facing,
         moving: character.current.moving,
-      });
+      };
+      if (sprite.current) drawSprite(ctx, sprite.current, drawn);
+      else drawCharacter(ctx, drawn);
     };
 
     raf = requestAnimationFrame(frame);
@@ -226,14 +255,24 @@ export function MapView() {
         className="h-full w-full cursor-pointer"
         onPointerDown={(e) => {
           if (useGame.getState().paused) return;
-          target.current = pointerToImage(e.clientX, e.clientY);
           keys.current.clear();
+
+          // The grid costs about a tenth of a second to sample, so it is built
+          // on the first click rather than on load — by which time the map is
+          // already on screen and the player has decided where to go.
+          grid.current ??= buildGrid(layout.shapes, aspect);
+
+          const destination = pointerToImage(e.clientX, e.clientY);
+          const found = findPath(grid.current, character.current.at, destination);
+          route.current = found
+            ? smoothPath(found, layout.shapes, aspect).slice(1)
+            : [];
         }}
       />
 
       {missing && (
         <p className="absolute inset-x-0 top-1/2 mx-auto max-w-md -translate-y-1/2 rounded border border-edge bg-mid p-4 text-center text-sm text-muted">
-          No image at {IMAGE}. Put the map there, then reload.
+          No image at {MAP_IMAGE}. Put the map there, then reload.
         </p>
       )}
 

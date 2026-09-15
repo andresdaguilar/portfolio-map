@@ -109,6 +109,27 @@ describe("hotspotAt", () => {
     expect(hotspotAt({ x: 0.35, y: 0.6 }, layout)).toBeNull();
   });
 
+  it("catches you from above as readily as from the side", () => {
+    // The radius is drawn as a circle on screen, so it has to behave like one.
+    // In normalised units a vertical offset covers nearly twice the screen
+    // distance of the same horizontal one on a 16:9 image.
+    const aspect = layout.image.width / layout.image.height;
+    const spot = layout.hotspots[0];
+
+    const fromSide = { x: spot.at.x + spot.radius * 0.8, y: spot.at.y };
+    const fromAbove = { x: spot.at.x, y: spot.at.y - spot.radius * 0.8 * aspect };
+
+    expect(hotspotAt(fromSide, layout)?.id).toBe("library");
+    expect(hotspotAt(fromAbove, layout)?.id).toBe("library");
+  });
+
+  it("still lets go once you are properly outside it", () => {
+    const aspect = layout.image.width / layout.image.height;
+    const spot = layout.hotspots[0];
+    const wellAbove = { x: spot.at.x, y: spot.at.y - spot.radius * 1.6 * aspect };
+    expect(hotspotAt(wellAbove, layout)).toBeNull();
+  });
+
   it("picks the nearest when two overlap", () => {
     const crowded: MapLayout = {
       ...layout,

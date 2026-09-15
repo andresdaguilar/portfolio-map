@@ -9,6 +9,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { MAP_IMAGE } from "./config";
 import { isWalkable } from "./geometry";
 import type { Hotspot, MapLayout, Point, Shape, ShapeKind } from "./types";
 import { EMPTY_LAYOUT } from "./types";
@@ -44,7 +45,7 @@ const COLOURS: Record<Mode, string> = {
   spawn: "#4ade80",
 };
 
-const DEFAULT_IMAGE = "/map/map.png";
+const DEFAULT_IMAGE = MAP_IMAGE;
 /** Clicking within this many screen pixels of the first point closes a shape. */
 const SNAP = 12;
 
