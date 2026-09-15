@@ -16,7 +16,7 @@ import {
   formatRange,
   kindleLink,
 } from "@/content";
-import { AmazonIcon, SpotifyIcon } from "@/ui/BrandIcons";
+import { AmazonIcon, SPOTIFY_GREEN, SpotifyIcon } from "@/ui/BrandIcons";
 
 /**
  * The accessible fallback.
@@ -228,7 +228,7 @@ export default function CvPage() {
                   href={show.spotify}
                   className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-accent underline underline-offset-4"
                 >
-                  <SpotifyIcon className="h-3.5 w-3.5" />
+                  <SpotifyIcon className="h-3.5 w-3.5" style={{ color: SPOTIFY_GREEN }} />
                   Spotify
                 </a>
               </p>

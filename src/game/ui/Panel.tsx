@@ -17,7 +17,12 @@ import {
   formatRange,
   kindleLink,
 } from "@/content";
-import { AmazonIcon, SpotifyIcon, YouTubeIcon } from "@/ui/BrandIcons";
+import {
+  AmazonIcon,
+  SPOTIFY_GREEN,
+  SpotifyIcon,
+  YouTubeIcon,
+} from "@/ui/BrandIcons";
 import { useGame } from "../core/store";
 
 /**
@@ -219,6 +224,18 @@ function ProjectPanel({ id }: { id: string }) {
   );
 }
 
+/**
+ * The surface every outbound brand button shares.
+ *
+ * White rather than the site accent. Amber is the one warm colour in this
+ * palette and it is spoken for — it marks what the player can interact with,
+ * so spending it on six Spotify buttons and six Amazon buttons shouts over
+ * everything the panel is actually saying. White recedes, and it lets each
+ * mark keep its own colour on top.
+ */
+const BRAND_BUTTON =
+  "inline-flex items-center gap-2 rounded bg-white font-semibold uppercase tracking-wider text-void";
+
 /** The one call to action a book has. Same shape everywhere it appears. */
 function AmazonButton({
   asin,
@@ -232,7 +249,7 @@ function AmazonButton({
       href={kindleLink(asin, "us")}
       target="_blank"
       rel="noreferrer"
-      className={`inline-flex items-center gap-2 rounded bg-accent font-semibold uppercase tracking-wider text-void ${
+      className={`${BRAND_BUTTON} ${
         compact ? "px-2.5 py-1.5 text-[0.65rem]" : "px-4 py-2 text-xs"
       }`}
     >
@@ -341,9 +358,9 @@ function ShowPanel({ id }: { id: string }) {
           href={show.spotify}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 text-xs font-semibold uppercase tracking-wider text-void"
+          className={`${BRAND_BUTTON} px-4 py-2 text-xs`}
         >
-          <SpotifyIcon />
+          <SpotifyIcon style={{ color: SPOTIFY_GREEN }} />
           Listen on Spotify
         </a>
         <a
@@ -504,9 +521,12 @@ function ShowsPanel() {
                 href={show.spotify}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded bg-accent px-2.5 py-1.5 text-[0.65rem] font-semibold uppercase tracking-wider text-void"
+                className={`${BRAND_BUTTON} px-2.5 py-1.5 text-[0.65rem]`}
               >
-                <SpotifyIcon className="h-3.5 w-3.5" />
+                <SpotifyIcon
+                  className="h-3.5 w-3.5"
+                  style={{ color: SPOTIFY_GREEN }}
+                />
                 Spotify
               </a>
             </p>
