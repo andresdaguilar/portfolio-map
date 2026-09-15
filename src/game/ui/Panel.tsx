@@ -405,11 +405,21 @@ function ShowsPanel() {
 function InterestsPanel() {
   return (
     <article>
-      <Heading title="Elsewhere" sub="Move · play · create · balance" />
-      <ul className="mt-5 space-y-2">
+      <Heading title="Hobbies" sub="What the other hours are for" />
+      <ul className="mt-5 space-y-5">
         {INTERESTS.map((interest) => (
-          <li key={interest.id} className="text-text/90">
-            {interest.line}
+          <li key={interest.id}>
+            <p className="flex flex-wrap items-baseline gap-x-3">
+              <span className="font-medium text-text">{interest.name}</span>
+              {interest.note && (
+                <span className="font-mono text-xs uppercase tracking-wider text-accent">
+                  {interest.note}
+                </span>
+              )}
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-text/85">
+              {interest.line}
+            </p>
           </li>
         ))}
       </ul>

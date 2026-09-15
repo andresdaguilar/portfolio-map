@@ -230,10 +230,20 @@ export default function CvPage() {
         </ul>
       </Section>
 
-      <Section title="Elsewhere">
-        <ul className="space-y-2 text-muted">
-          {INTERESTS.map((i) => (
-            <li key={i.id}>{i.line}</li>
+      <Section title="Away from the keyboard">
+        <ul className="space-y-4">
+          {INTERESTS.map((interest) => (
+            <li key={interest.id}>
+              <p className="flex flex-wrap items-baseline gap-x-3">
+                <span className="font-medium text-text">{interest.name}</span>
+                {interest.note && (
+                  <span className="font-mono text-xs uppercase tracking-wider text-accent">
+                    {interest.note}
+                  </span>
+                )}
+              </p>
+              <p className="mt-1 leading-relaxed text-text/85">{interest.line}</p>
+            </li>
           ))}
         </ul>
       </Section>

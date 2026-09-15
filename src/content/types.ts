@@ -121,15 +121,24 @@ export interface Volume {
   asin?: string;
 }
 
-/** A scattered personal detail. Cheap to find, one line of payoff. */
+/**
+ * Something done away from the keyboard.
+ *
+ * `note` is the concrete part — a count, a frequency, an admission — kept
+ * separate from the line so the panel can set it apart. Facts belong in the
+ * note; the line is allowed to have a point of view.
+ */
 export interface Interest {
   id: string;
-  /** The object the player walks up to. */
-  prop: string;
-  /** Which room it hides in. */
-  zone: ZoneId;
-  /** The single line shown on interaction. No panel. */
+  name: string;
+  /** The hard detail, if there is one: "53 countries", "self-taught". */
+  note?: string;
+  /** One sentence. This is the whole of it. */
   line: string;
+  /** The object the player walks up to in the side-scrolling world. */
+  prop: string;
+  /** Which room it hides in there. */
+  zone: ZoneId;
 }
 
 export interface Profile {
