@@ -2,7 +2,7 @@ export * from "./types";
 export { PROFILE, ZONES } from "./profile";
 export { EXPERIENCE } from "./experience";
 export { CREDENTIALS, SKILLS, LANGUAGES } from "./education";
-export { PROJECTS } from "./projects";
+export { PROJECTS, LISTED_PROJECTS } from "./projects";
 export { SHOWS, PODCAST_CHANNEL, PODCAST_BLOG } from "./podcasts";
 export { BOOKS, VOLUMES, MARKETPLACES, kindleLink } from "./books";
 export { INTERESTS } from "./interests";

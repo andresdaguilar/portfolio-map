@@ -12,6 +12,7 @@ export const PROJECTS: Project[] = [
       "The rig behind six podcasts. Scans the episode tree on disk, tracks bilingual script/blog/audio state per episode, and drives ffmpeg to assemble intro + narration + outro at -16 LUFS, then renders the video from the cover art.",
     stack: ["Next.js", "TypeScript", "ffmpeg", "Node.js"],
     screen: "/screens/en20minutos.png",
+    archived: true,
   },
   {
     id: "atsio",
@@ -39,6 +40,7 @@ export const PROJECTS: Project[] = [
       "A localization operations platform: orchestration, automation, and governance for multilingual content and the business processes wrapped around it.",
     stack: ["Next.js", "TypeScript", "PostgreSQL"],
     screen: "/screens/hivensis.png",
+    archived: true,
   },
   {
     id: "founderos",
@@ -47,6 +49,7 @@ export const PROJECTS: Project[] = [
       "A personal founder operating system — businesses, content, finances, and the daily agenda in one executive view. Built spec-first: the documentation came before the code.",
     stack: ["Next.js", "Prisma", "Neon", "Auth.js", "Google APIs"],
     screen: "/screens/founderos.png",
+    archived: true,
   },
   {
     id: "nutriciondesk",
@@ -84,6 +87,7 @@ export const PROJECTS: Project[] = [
     summary: "An online course school — catalogue, enrolment, and delivery.",
     stack: ["Next.js", "Neon", "Drizzle", "Auth.js", "Resend"],
     screen: "/screens/william.png",
+    archived: true,
   },
   {
     id: "latam-staffers",
@@ -100,6 +104,7 @@ export const PROJECTS: Project[] = [
       "Private daily body-metrics tracker — weight, visceral fat, muscle percentage, biological age — charted over time with historical highs and lows.",
     stack: ["Next.js", "Drizzle", "PostgreSQL"],
     screen: "/screens/biometricas.png",
+    archived: true,
   },
   {
     id: "blog-en20minutos",
@@ -108,6 +113,7 @@ export const PROJECTS: Project[] = [
       "The public face of the podcasts: episode write-ups served from Contentful.",
     stack: ["Next.js", "Contentful", "TypeScript"],
     screen: "/screens/blog.png",
+    archived: true,
   },
   {
     id: "poker-planning",
@@ -115,5 +121,15 @@ export const PROJECTS: Project[] = [
     summary: "Real-time estimation rounds for distributed teams.",
     stack: ["Next.js", "TypeScript"],
     screen: "/screens/poker.png",
+    archived: true,
   },
 ];
+
+/**
+ * What the résumé lists.
+ *
+ * The world can show everything that was ever built; a résumé is a claim about
+ * what is worth your time, and every extra line spends some of the attention
+ * the good ones need.
+ */
+export const LISTED_PROJECTS = PROJECTS.filter((p) => !p.archived);

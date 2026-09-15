@@ -6,10 +6,10 @@ import {
   EXPERIENCE,
   INTERESTS,
   LANGUAGES,
+  LISTED_PROJECTS,
   PODCAST_CHANNEL,
   PODCAST_BLOG,
   PROFILE,
-  PROJECTS,
   SHOWS,
   SKILLS,
   VOLUMES,
@@ -165,7 +165,7 @@ export default function CvPage() {
 
       <Section title="Projects">
         <ul className="space-y-6">
-          {PROJECTS.map((p) => (
+          {LISTED_PROJECTS.map((p) => (
             <li key={p.id} className="flex gap-4">
               {p.logo && (
                 <span className="hidden h-11 w-16 shrink-0 items-center justify-center rounded-md bg-white px-2 sm:inline-flex">

@@ -92,6 +92,15 @@ export interface Project {
    * there yet; a dead link costs more credibility than an honest "in progress".
    */
   wip?: boolean;
+  /**
+   * Built, but kept off the résumé.
+   *
+   * A list of thirteen projects reads as thirteen half-finished things; a list
+   * of six reads as six finished ones. These stay in the content layer because
+   * they are real and the world still shows them — they just do not earn a line
+   * on the page a recruiter skims.
+   */
+  archived?: boolean;
   /** Screenshot looped on the workshop monitor, under `/public/screens/`. */
   screen?: string;
 }
