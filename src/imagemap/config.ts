@@ -5,7 +5,7 @@
  * calibrator have to agree on the image, and a layout traced against one
  * picture is meaningless against another.
  */
-export const MAP_IMAGE = "/map/IsoMAP.jpg";
+export const MAP_IMAGE = "/map/map2.png";
 
 /**
  * The character's description, if one has been supplied. It names its own

@@ -46,6 +46,8 @@ export function MapView() {
   const openPanel = useGame((s) => s.openPanel);
 
   const aspect = layout.image.width / layout.image.height;
+  /** A layout with no ground in it has not been traced yet. */
+  const traced = layout.shapes.some((shape) => shape.kind === "walk");
 
   /** Hot state, read every frame — deliberately not React state. */
   const character = useRef<Character>(
@@ -305,6 +307,26 @@ export function MapView() {
             : [];
         }}
       />
+
+      {!traced && !missing && (
+        <div className="absolute inset-x-0 top-1/2 mx-auto max-w-md -translate-y-1/2 rounded border border-edge bg-mid p-5 text-center">
+          <p className="text-sm text-text">This map has not been traced yet.</p>
+          <p className="mt-2 text-sm text-muted">
+            Nothing knows where the ground is, so there is nowhere to walk.
+            Draw the paths over it, then export the layout to{" "}
+            <code className="font-mono text-xs text-text">
+              src/imagemap/layout.json
+            </code>
+            .
+          </p>
+          <Link
+            href="/calibrate"
+            className="mt-4 inline-block rounded bg-accent px-4 py-2 text-xs font-semibold uppercase tracking-wider text-void"
+          >
+            Open the calibrator
+          </Link>
+        </div>
+      )}
 
       {missing && (
         <p className="absolute inset-x-0 top-1/2 mx-auto max-w-md -translate-y-1/2 rounded border border-edge bg-mid p-4 text-center text-sm text-muted">

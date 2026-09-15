@@ -1,8 +1,12 @@
 # The map image
 
-The map in use is `IsoMAP.jpg`. The filename is set in one place —
+The map in use is `map2.png`. The filename is set in one place —
 `src/imagemap/config.ts` — because the viewer and the calibrator have to agree
 on it: a layout traced against one picture means nothing against another.
+
+Changing the picture means tracing it again. `IsoMAP.jpg` is the previous
+render and its layout is in the git history, but the second map moved every
+district, so none of it carried over.
 
 Two things matter:
 

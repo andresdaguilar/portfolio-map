@@ -26,8 +26,9 @@ describe("targetForHotspot", () => {
     expect(targetForHotspot("Certifications")).toEqual({ kind: "credentials" });
   });
 
-  it("opens something for every hotspot on the real map", () => {
-    const map = layout as MapLayout;
+  const map = layout as MapLayout;
+
+  it.skipIf(map.hotspots.length === 0)("opens something for every hotspot on the real map", () => {
     const dead = map.hotspots
       .filter((h) => targetForHotspot(h.id) === null)
       .map((h) => h.id);
