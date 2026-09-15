@@ -40,7 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# The map artwork is large and belongs with the design, not the diff.
-# Comment this out if you want it version-controlled.
-/public/map/*.jpg
-/public/map/*.png
+# The map artwork and the character sheets are the product, not build output:
+# without them the site renders an empty canvas. They are committed.
+# The first render, superseded by map2.png and kept only locally.
+/public/map/IsoMAP.jpg

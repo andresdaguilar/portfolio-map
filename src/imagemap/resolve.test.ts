@@ -26,6 +26,15 @@ describe("targetForHotspot", () => {
     expect(targetForHotspot("Certifications")).toEqual({ kind: "credentials" });
   });
 
+  it("takes whatever the map happens to call a section", () => {
+    // Labels are written while looking at the picture, so the same place gets
+    // a different name on each render: "Books" became "Published Books" and
+    // "Podcast" became "Podcasts" between the first map and the second.
+    expect(targetForHotspot("Published Books")).toEqual({ kind: "books" });
+    expect(targetForHotspot("Podcasts")).toEqual({ kind: "shows" });
+    expect(targetForHotspot("Bachelors Degree")).toEqual({ kind: "credentials" });
+  });
+
   const map = layout as MapLayout;
 
   it.skipIf(map.hotspots.length === 0)("opens something for every hotspot on the real map", () => {
