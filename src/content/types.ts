@@ -90,7 +90,11 @@ export interface PodcastShow {
   /** Original Spanish name of the show. */
   nativeName: string;
   summary: string;
-  episodes: number;
+  /**
+   * No episode count. It is wrong the week after it is written, and a number
+   * that quietly rots is worse than no number.
+   */
+  spotify: string;
   /** Hex colour of this show's backlit wall panel in the studio. */
   color: string;
 }

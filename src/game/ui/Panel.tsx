@@ -8,6 +8,7 @@ import {
   LANGUAGES,
   MARKETPLACES,
   PROFILE,
+  PODCAST_CHANNEL,
   PROJECTS,
   SHOWS,
   VOLUMES,
@@ -277,10 +278,26 @@ function ShowPanel({ id }: { id: string }) {
 
   return (
     <article>
-      <Heading title={show.name} sub={show.nativeName} />
+      <Heading title={show.nativeName} sub={show.name} />
       <p className="mt-4 leading-relaxed text-text/90">{show.summary}</p>
-      <p className="mt-4 font-mono text-sm text-accent">
-        {show.episodes} episodes
+
+      <p className="mt-6 flex flex-wrap gap-2">
+        <a
+          href={show.spotify}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded bg-accent px-4 py-2 text-xs font-semibold uppercase tracking-wider text-void"
+        >
+          Listen on Spotify
+        </a>
+        <a
+          href={PODCAST_CHANNEL}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded border border-edge px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted hover:border-accent hover:text-accent"
+        >
+          Watch on YouTube
+        </a>
       </p>
     </article>
   );
@@ -389,14 +406,16 @@ function BooksPanel() {
   );
 }
 
+/** All six, for a hotspot that marks the studio rather than one show. */
 function ShowsPanel() {
   return (
     <article>
       <Heading
         title="En 20 Minutos"
-        sub={`${SHOWS.length} shows · written, narrated and produced solo`}
+        sub="Six shows, written, narrated and produced solo"
       />
-      <ul className="mt-5 space-y-3">
+
+      <ul className="mt-5 space-y-4">
         {SHOWS.map((show) => (
           <li key={show.id}>
             <p className="flex flex-wrap items-baseline gap-x-3">
@@ -405,15 +424,32 @@ function ShowsPanel() {
                 style={{ background: show.color }}
                 aria-hidden
               />
-              <span className="font-medium text-text">{show.nativeName}</span>
-              <span className="font-mono text-xs text-muted">
-                {show.episodes} episodes
-              </span>
+              <a
+                href={show.spotify}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-text underline decoration-edge underline-offset-4 hover:text-accent hover:decoration-accent"
+              >
+                {show.nativeName}
+              </a>
             </p>
             <p className="mt-0.5 pl-6 text-sm text-text/80">{show.summary}</p>
           </li>
         ))}
       </ul>
+
+      <p className="mt-6 border-t border-edge pt-4 text-sm text-muted">
+        Every show is also on{" "}
+        <a
+          href={PODCAST_CHANNEL}
+          target="_blank"
+          rel="noreferrer"
+          className="text-accent underline underline-offset-4"
+        >
+          YouTube
+        </a>
+        , and {VOLUMES.length} volumes have been collected into books.
+      </p>
     </article>
   );
 }

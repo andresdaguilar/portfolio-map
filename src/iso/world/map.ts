@@ -318,7 +318,7 @@ function studio(): Building[] {
       color: C.slate,
       accent: show.color,
       label: show.nativeName,
-      sub: `${show.episodes} episodes`,
+      sub: show.summary,
     })),
     ...VOLUMES.map((volume, n): Building => ({
       id: volume.id,

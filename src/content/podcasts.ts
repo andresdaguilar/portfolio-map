@@ -2,16 +2,22 @@ import type { PodcastShow } from "./types";
 
 /**
  * "En 20 Minutos" — six Spanish-language shows, each episode about twenty
- * minutes. Counts are the highest episode number produced per line.
- * Each show owns one backlit panel on the studio wall.
+ * minutes. Each owns one backlit panel on the studio wall.
+ *
+ * Spotify links are stored bare. The share URLs come with an `si=` token that
+ * identifies the session they were copied from; it does nothing for a listener
+ * and quietly reports where the link came from, so it is stripped.
  */
+
+/** Every show, in one place. */
+export const PODCAST_CHANNEL = "https://www.youtube.com/@En20minutos/podcasts";
 export const SHOWS: PodcastShow[] = [
   {
     id: "historia",
     name: "History in 20 Minutes",
     nativeName: "Historia en 20 Minutos",
     summary: "One historical event or process per episode, start to finish.",
-    episodes: 51,
+    spotify: "https://open.spotify.com/show/0Az9sa6Wc4YlILoRUeNF4G",
     color: "#C08A4A",
   },
   {
@@ -19,7 +25,7 @@ export const SHOWS: PodcastShow[] = [
     name: "Philosophy in 20 Minutes",
     nativeName: "Filosofía en 20 Minutos",
     summary: "A thinker, an idea, or an argument — made usable in twenty minutes.",
-    episodes: 50,
+    spotify: "https://open.spotify.com/show/0AdNqRZ1NhpjdnKtlmf79E",
     color: "#7A8CA8",
   },
   {
@@ -27,7 +33,7 @@ export const SHOWS: PodcastShow[] = [
     name: "Books in 20 Minutes",
     nativeName: "Libros en 20 Minutos",
     summary: "What a book actually says, without the airport-bookshop summary.",
-    episodes: 53,
+    spotify: "https://open.spotify.com/show/7chcAvj0YFjFECNewB8Txo",
     color: "#8FA37A",
   },
   {
@@ -35,7 +41,7 @@ export const SHOWS: PodcastShow[] = [
     name: "Mythology in 20 Minutes",
     nativeName: "Mitología en 20 Minutos",
     summary: "Gods, monsters, and the stories cultures told to explain themselves.",
-    episodes: 50,
+    spotify: "https://open.spotify.com/show/57FMWjHjt83yxjmnL1JwBE",
     color: "#A87A9C",
   },
   {
@@ -43,7 +49,7 @@ export const SHOWS: PodcastShow[] = [
     name: "Comics in 20 Minutes",
     nativeName: "Comics en 20 Minutos",
     summary: "Runs, characters, and the people who drew them.",
-    episodes: 50,
+    spotify: "https://open.spotify.com/show/033ognPomoIEFGQHgkxbc6",
     color: "#C05A4A",
   },
   {
@@ -51,7 +57,7 @@ export const SHOWS: PodcastShow[] = [
     name: "Whisky in 20 Minutes",
     nativeName: "Whisky en 20 Minutos",
     summary: "Regions, distilleries, and how the thing in the glass got there.",
-    episodes: 50,
+    spotify: "https://open.spotify.com/show/033ow4hvLJ9SY4NwDhOLSr",
     color: "#D19A3C",
   },
 ];

@@ -6,6 +6,7 @@ import {
   EXPERIENCE,
   INTERESTS,
   LANGUAGES,
+  PODCAST_CHANNEL,
   PROFILE,
   PROJECTS,
   SHOWS,
@@ -187,16 +188,22 @@ export default function CvPage() {
       <Section title="Podcasts">
         <p className="mb-6 text-muted">
           <em>En 20 Minutos</em> — six Spanish-language shows, written, narrated,
-          and produced solo.
+          and produced solo. All of them on{" "}
+          <a href={PODCAST_CHANNEL} className="text-accent underline underline-offset-4">
+            YouTube
+          </a>
+          .
         </p>
         <ul className="space-y-3">
-          {SHOWS.map((s) => (
-            <li key={s.id} className="flex flex-wrap items-baseline gap-x-3">
-              <span className="font-medium">{s.nativeName}</span>
-              <span className="font-mono text-sm text-muted">
-                {s.episodes} episodes
-              </span>
-              <span className="w-full text-muted">{s.summary}</span>
+          {SHOWS.map((show) => (
+            <li key={show.id} className="flex flex-wrap items-baseline gap-x-3">
+              <a
+                href={show.spotify}
+                className="font-medium text-accent underline underline-offset-4"
+              >
+                {show.nativeName}
+              </a>
+              <span className="w-full text-muted">{show.summary}</span>
             </li>
           ))}
         </ul>
