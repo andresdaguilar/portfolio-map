@@ -9,6 +9,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { isWalkable } from "./geometry";
 import type { Hotspot, MapLayout, Point, Shape, ShapeKind } from "./types";
 import { EMPTY_LAYOUT } from "./types";
 
@@ -68,6 +69,7 @@ type Action =
   | { type: "undo" }
   | { type: "clearDraft" }
   | { type: "hotspot"; hotspot: Hotspot }
+  | { type: "radius"; index: number; radius: number }
   | { type: "spawn"; at: Point }
   | { type: "removeShape"; index: number }
   | { type: "removeHotspot"; index: number }
@@ -103,6 +105,17 @@ function reduce(state: EditorState, action: Action): EditorState {
 
     case "hotspot":
       return { ...state, layout: { ...layout, hotspots: [...layout.hotspots, action.hotspot] } };
+
+    case "radius":
+      return {
+        ...state,
+        layout: {
+          ...layout,
+          hotspots: layout.hotspots.map((h, i) =>
+            i === action.index ? { ...h, radius: action.radius } : h,
+          ),
+        },
+      };
 
     case "spawn":
       return { ...state, layout: { ...layout, spawn: action.at } };
@@ -424,6 +437,51 @@ export function Calibrator() {
     return () => window.removeEventListener("keydown", onKey);
   }, [closeShape, fit, mode]);
 
+  /* -------------------------------------------------------------- checks */
+
+  /**
+   * Can the character actually get to each hotspot?
+   *
+   * A hotspot marks the thing, not the standing spot, so its own centre is
+   * usually inside a building. What matters is whether any walkable ground
+   * falls within its radius — and the first pass produced several that were
+   * twice their radius from the nearest path, which would have looked like a
+   * bug in the game rather than a gap in the tracing.
+   */
+  const unreachable = useMemo(() => {
+    const out = new Set<string>();
+    const rings = 14;
+    const steps = 32;
+
+    for (const hotspot of layout.hotspots) {
+      let reachable = isWalkable(hotspot.at, layout.shapes);
+      for (let r = 1; r <= rings && !reachable; r += 1) {
+        const radius = (hotspot.radius * r) / rings;
+        for (let s = 0; s < steps; s += 1) {
+          const angle = (s / steps) * Math.PI * 2;
+          const probe = {
+            x: hotspot.at.x + Math.cos(angle) * radius,
+            // The image is wider than tall, so a circle on screen is an
+            // ellipse in normalised space.
+            y: hotspot.at.y + (Math.sin(angle) * radius * layout.image.width) / (layout.image.height || 1),
+          };
+          if (isWalkable(probe, layout.shapes)) {
+            reachable = true;
+            break;
+          }
+        }
+      }
+      if (!reachable) out.add(hotspot.id);
+    }
+    return out;
+  }, [layout]);
+
+  const duplicateIds = useMemo(() => {
+    const seen = new Map<string, number>();
+    for (const shape of layout.shapes) seen.set(shape.id, (seen.get(shape.id) ?? 0) + 1);
+    return new Set([...seen].filter(([, n]) => n > 1).map(([id]) => id));
+  }, [layout.shapes]);
+
   /* ------------------------------------------------------------- export */
 
   const json = useMemo(() => JSON.stringify(layout, null, 2), [layout]);
@@ -530,6 +588,11 @@ export function Calibrator() {
                 <span className="truncate font-mono" style={{ color: COLOURS[shape.kind] }}>
                   {shape.id}
                   <span className="text-muted"> · {shape.points.length}</span>
+                  {duplicateIds.has(shape.id) && (
+                    <span className="ml-1 text-amber-400" title="Another shape has this name">
+                      ⚠
+                    </span>
+                  )}
                 </span>
                 <button
                   type="button"
@@ -541,17 +604,35 @@ export function Calibrator() {
               </li>
             ))}
             {layout.hotspots.map((hotspot, i) => (
-              <li key={`h-${hotspot.id}-${i}`} className="flex items-center justify-between gap-2 text-xs">
-                <span className="truncate font-mono" style={{ color: COLOURS.hotspot }}>
-                  ◎ {hotspot.id}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: "removeHotspot", index: i })}
-                  className="text-muted hover:text-accent"
-                >
-                  ×
-                </button>
+              <li key={`h-${hotspot.id}-${i}`} className="text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate font-mono" style={{ color: COLOURS.hotspot }}>
+                    ◎ {hotspot.id}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: "removeHotspot", index: i })}
+                    className="text-muted hover:text-accent"
+                  >
+                    ×
+                  </button>
+                </div>
+                <input
+                  type="range"
+                  min={0.01}
+                  max={0.14}
+                  step={0.005}
+                  value={hotspot.radius}
+                  onChange={(e) =>
+                    dispatch({ type: "radius", index: i, radius: Number(e.target.value) })
+                  }
+                  className="mt-1 w-full accent-amber-400"
+                />
+                {unreachable.has(hotspot.id) && (
+                  <p className="text-[10px] leading-tight text-amber-400">
+                    No walkable ground in range — widen it or trace the path closer.
+                  </p>
+                )}
               </li>
             ))}
           </ul>
