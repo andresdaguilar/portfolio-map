@@ -7,13 +7,16 @@ import {
   INTERESTS,
   LANGUAGES,
   PODCAST_CHANNEL,
+  PODCAST_BLOG,
   PROFILE,
   PROJECTS,
   SHOWS,
   SKILLS,
+  VOLUMES,
   formatRange,
   kindleLink,
 } from "@/content";
+import { AmazonIcon, SpotifyIcon } from "@/ui/BrandIcons";
 
 /**
  * The accessible fallback.
@@ -163,23 +166,41 @@ export default function CvPage() {
       <Section title="Projects">
         <ul className="space-y-6">
           {PROJECTS.map((p) => (
-            <li key={p.id}>
-              <h3 className="font-medium">
-                {p.url ? (
-                  <a
-                    href={p.url}
-                    className="text-accent underline underline-offset-4"
-                  >
-                    {p.name}
-                  </a>
-                ) : (
-                  p.name
-                )}
-              </h3>
-              <p className="mt-1 leading-relaxed">{p.summary}</p>
-              <p className="mt-1 font-mono text-xs text-muted">
-                {p.stack.join(" · ")}
-              </p>
+            <li key={p.id} className="flex gap-4">
+              {p.logo && (
+                <span className="hidden h-11 w-16 shrink-0 items-center justify-center rounded-md bg-white px-2 sm:inline-flex">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a
+                      static mark on a no-JavaScript page. */}
+                  <img
+                    src={p.logo}
+                    alt=""
+                    className="h-6 w-auto object-contain"
+                  />
+                </span>
+              )}
+              <div className="min-w-0">
+                <h3 className="flex flex-wrap items-baseline gap-x-3 font-medium">
+                  {p.url ? (
+                    <a
+                      href={p.url}
+                      className="text-accent underline underline-offset-4"
+                    >
+                      {p.name}
+                    </a>
+                  ) : (
+                    p.name
+                  )}
+                  {p.wip && (
+                    <span className="font-mono text-xs uppercase tracking-wider text-muted">
+                      In progress
+                    </span>
+                  )}
+                </h3>
+                <p className="mt-1 leading-relaxed">{p.summary}</p>
+                <p className="mt-1 font-mono text-xs text-muted">
+                  {p.stack.join(" · ")}
+                </p>
+              </div>
             </li>
           ))}
         </ul>
@@ -192,21 +213,48 @@ export default function CvPage() {
           <a href={PODCAST_CHANNEL} className="text-accent underline underline-offset-4">
             YouTube
           </a>
+          , with the written companion at{" "}
+          <a href={PODCAST_BLOG} className="text-accent underline underline-offset-4">
+            en20minutos.com
+          </a>
           .
         </p>
-        <ul className="space-y-3">
+        <ul className="space-y-4">
           {SHOWS.map((show) => (
-            <li key={show.id} className="flex flex-wrap items-baseline gap-x-3">
-              <a
-                href={show.spotify}
-                className="font-medium text-accent underline underline-offset-4"
-              >
-                {show.nativeName}
-              </a>
-              <span className="w-full text-muted">{show.summary}</span>
+            <li key={show.id}>
+              <p className="flex flex-wrap items-baseline gap-x-3">
+                <span className="font-medium">{show.nativeName}</span>
+                <a
+                  href={show.spotify}
+                  className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-accent underline underline-offset-4"
+                >
+                  <SpotifyIcon className="h-3.5 w-3.5" />
+                  Spotify
+                </a>
+              </p>
+              <p className="mt-0.5 text-muted">{show.summary}</p>
             </li>
           ))}
         </ul>
+
+        <p className="mt-6 text-muted">
+          {VOLUMES.length} volumes collected into books:{" "}
+          {VOLUMES.map((volume, i) => (
+            <span key={volume.id}>
+              {i > 0 && " · "}
+              {volume.asin ? (
+                <a
+                  href={kindleLink(volume.asin, "us")}
+                  className="text-accent underline underline-offset-4"
+                >
+                  {volume.title}
+                </a>
+              ) : (
+                volume.title
+              )}
+            </span>
+          ))}
+        </p>
       </Section>
 
       <Section title="Books">
@@ -214,12 +262,7 @@ export default function CvPage() {
           {BOOKS.map((book) => (
             <li key={book.id}>
               <h3 className="font-medium">
-                <a
-                  href={kindleLink(book.asin, "us")}
-                  className="text-accent underline underline-offset-4"
-                >
-                  {book.title}
-                </a>
+                {book.title}
                 {book.language === "es" && (
                   <span className="ml-2 font-mono text-xs uppercase tracking-wider text-muted">
                     Spanish
@@ -230,6 +273,15 @@ export default function CvPage() {
                 <p className="mt-0.5 text-sm text-muted">{book.subtitle}</p>
               )}
               <p className="mt-1.5 leading-relaxed text-text/85">{book.excerpt}</p>
+              <p className="mt-2">
+                <a
+                  href={kindleLink(book.asin, "us")}
+                  className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-accent underline underline-offset-4"
+                >
+                  <AmazonIcon className="h-3.5 w-3.5" />
+                  Amazon
+                </a>
+              </p>
             </li>
           ))}
         </ul>

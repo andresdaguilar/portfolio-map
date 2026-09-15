@@ -9,6 +9,7 @@ import {
   MARKETPLACES,
   PROFILE,
   PODCAST_CHANNEL,
+  PODCAST_BLOG,
   PROJECTS,
   SHOWS,
   VOLUMES,
@@ -16,6 +17,7 @@ import {
   formatRange,
   kindleLink,
 } from "@/content";
+import { AmazonIcon, SpotifyIcon, YouTubeIcon } from "@/ui/BrandIcons";
 import { useGame } from "../core/store";
 
 /**
@@ -76,7 +78,13 @@ export function Panel() {
         role="dialog"
         aria-modal="true"
         aria-label={panel.kind}
-        className="max-h-[85dvh] w-full max-w-2xl overflow-y-auto rounded-t-xl border border-edge bg-mid px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 sm:rounded-xl sm:pb-6"
+        className={`max-h-[85dvh] w-full overflow-y-auto rounded-t-xl border border-edge bg-mid px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 sm:rounded-xl sm:pb-6 ${
+          // The catalogue panels lay out in two columns; the extra width is
+          // what buys the second one, and with it most of the scrolling.
+          panel.kind === "books" || panel.kind === "shows"
+            ? "max-w-4xl"
+            : "max-w-2xl"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {panel.kind === "experience" && <ExperiencePanel id={panel.id} />}
@@ -155,13 +163,44 @@ function Heading({ title, sub }: { title: string; sub?: string }) {
   );
 }
 
+/**
+ * A brand mark, on its own white plate.
+ *
+ * Every logo here was drawn for its own site, on its own background. Two of
+ * them are dark artwork and one is a JPEG with white baked in, so dropping
+ * them straight onto this palette would lose two and box the third. The plate
+ * costs one small rectangle of light and keeps all four legible and correct.
+ */
+function LogoPlate({ src, alt }: { src: string; alt: string }) {
+  return (
+    <span className="inline-flex h-12 shrink-0 items-center justify-center rounded-md bg-white px-2.5">
+      {/* eslint-disable-next-line @next/next/no-img-element -- a static mark in
+          a modal; the image component's layout machinery buys nothing here. */}
+      <img src={src} alt={alt} className="h-7 w-auto max-w-[150px] object-contain" />
+    </span>
+  );
+}
+
 function ProjectPanel({ id }: { id: string }) {
   const project = PROJECTS.find((p) => p.id === id);
   if (!project) return null;
 
   return (
     <article>
-      <Heading title={project.name} />
+      <div className="flex items-center gap-4">
+        {project.logo && <LogoPlate src={project.logo} alt={`${project.name} logo`} />}
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-text">
+            {project.name}
+          </h2>
+          {project.wip && (
+            <p className="mt-1 font-mono text-xs uppercase tracking-wider text-accent">
+              In progress
+            </p>
+          )}
+        </div>
+      </div>
+
       <p className="mt-4 leading-relaxed text-text/90">{project.summary}</p>
       <p className="mt-4 font-mono text-xs text-muted">
         {project.stack.join(" · ")}
@@ -171,12 +210,35 @@ function ProjectPanel({ id }: { id: string }) {
           href={project.url}
           target="_blank"
           rel="noreferrer"
-          className="mt-4 inline-block text-accent underline underline-offset-4"
+          className="mt-5 inline-block rounded bg-accent px-4 py-2 text-xs font-semibold uppercase tracking-wider text-void"
         >
-          {project.url.replace(/^https?:\/\//, "")}
+          {project.url.replace(/^https?:\/\/(www\.)?/, "")}
         </a>
       )}
     </article>
+  );
+}
+
+/** The one call to action a book has. Same shape everywhere it appears. */
+function AmazonButton({
+  asin,
+  compact = false,
+}: {
+  asin: string;
+  compact?: boolean;
+}) {
+  return (
+    <a
+      href={kindleLink(asin, "us")}
+      target="_blank"
+      rel="noreferrer"
+      className={`inline-flex items-center gap-2 rounded bg-accent font-semibold uppercase tracking-wider text-void ${
+        compact ? "px-2.5 py-1.5 text-[0.65rem]" : "px-4 py-2 text-xs"
+      }`}
+    >
+      <AmazonIcon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+      {compact ? "Amazon" : "Read it on Amazon"}
+    </a>
   );
 }
 
@@ -201,14 +263,7 @@ function BookPanel({ id }: { id: string }) {
       <p className="mt-5 leading-relaxed text-text/90">{book.excerpt}</p>
 
       <p className="mt-6">
-        <a
-          href={kindleLink(book.asin, "us")}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-block rounded bg-accent px-4 py-2 text-xs font-semibold uppercase tracking-wider text-void"
-        >
-          Read it on Amazon
-        </a>
+        <AmazonButton asin={book.asin} />
       </p>
 
       <p className="mt-3 font-mono text-xs text-muted">
@@ -286,17 +341,27 @@ function ShowPanel({ id }: { id: string }) {
           href={show.spotify}
           target="_blank"
           rel="noreferrer"
-          className="rounded bg-accent px-4 py-2 text-xs font-semibold uppercase tracking-wider text-void"
+          className="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 text-xs font-semibold uppercase tracking-wider text-void"
         >
+          <SpotifyIcon />
           Listen on Spotify
         </a>
         <a
           href={PODCAST_CHANNEL}
           target="_blank"
           rel="noreferrer"
-          className="rounded border border-edge px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted hover:border-accent hover:text-accent"
+          className="inline-flex items-center gap-2 rounded border border-edge px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted hover:border-accent hover:text-accent"
         >
+          <YouTubeIcon />
           Watch on YouTube
+        </a>
+        <a
+          href={PODCAST_BLOG}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center rounded border border-edge px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted hover:border-accent hover:text-accent"
+        >
+          Read the blog
         </a>
       </p>
     </article>
@@ -365,34 +430,39 @@ function BooksPanel() {
     <article>
       <Heading title="Written" sub={`${BOOKS.length} books, all on Amazon`} />
 
-      <ul className="mt-5 space-y-6">
+      {/*
+        Two columns, and every excerpt clamped to four lines. Six full blurbs
+        stacked one under another is three screens of scrolling to learn that
+        six books exist — which is the one thing the panel should say without
+        being scrolled at all. The whole excerpt is still a click away, in the
+        book's own panel out on the map.
+      */}
+      <ul className="mt-5 grid gap-x-8 gap-y-6 sm:grid-cols-2">
         {BOOKS.map((book) => (
-          <li key={book.id}>
-            <p className="flex flex-wrap items-baseline gap-x-3">
+          <li key={book.id} className="flex flex-col">
+            <p className="flex flex-wrap items-baseline gap-x-2.5">
               <span
                 className="inline-block h-3 w-3 shrink-0 rounded-sm"
                 style={{ background: book.color }}
                 aria-hidden
               />
-              <a
-                href={kindleLink(book.asin, "us")}
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium text-text underline decoration-edge underline-offset-4 hover:text-accent hover:decoration-accent"
-              >
-                {book.title}
-              </a>
+              <span className="font-medium text-text">{book.title}</span>
               {book.language === "es" && (
-                <span className="font-mono text-xs uppercase tracking-wider text-muted">
+                <span className="font-mono text-[0.65rem] uppercase tracking-wider text-muted">
                   Spanish
                 </span>
               )}
             </p>
             {book.subtitle && (
-              <p className="mt-0.5 pl-6 text-sm text-muted">{book.subtitle}</p>
+              <p className="mt-0.5 line-clamp-1 pl-[1.375rem] text-sm text-muted">
+                {book.subtitle}
+              </p>
             )}
-            <p className="mt-1.5 pl-6 text-sm leading-relaxed text-text/80">
+            <p className="mt-1.5 line-clamp-3 pl-[1.375rem] text-sm leading-relaxed text-text/80">
               {book.excerpt}
+            </p>
+            <p className="mt-2.5 pl-[1.375rem]">
+              <AmazonButton asin={book.asin} compact />
             </p>
           </li>
         ))}
@@ -415,41 +485,59 @@ function ShowsPanel() {
         sub="Six shows, written, narrated and produced solo"
       />
 
-      <ul className="mt-5 space-y-4">
+      <ul className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2">
         {SHOWS.map((show) => (
           <li key={show.id}>
-            <p className="flex flex-wrap items-baseline gap-x-3">
+            <p className="flex flex-wrap items-baseline gap-x-2.5">
               <span
                 className="inline-block h-3 w-3 shrink-0 rounded-sm"
                 style={{ background: show.color }}
                 aria-hidden
               />
+              <span className="font-medium text-text">{show.nativeName}</span>
+            </p>
+            <p className="mt-0.5 pl-[1.375rem] text-sm text-text/80">
+              {show.summary}
+            </p>
+            <p className="mt-2 pl-[1.375rem]">
               <a
                 href={show.spotify}
                 target="_blank"
                 rel="noreferrer"
-                className="font-medium text-text underline decoration-edge underline-offset-4 hover:text-accent hover:decoration-accent"
+                className="inline-flex items-center gap-2 rounded bg-accent px-2.5 py-1.5 text-[0.65rem] font-semibold uppercase tracking-wider text-void"
               >
-                {show.nativeName}
+                <SpotifyIcon className="h-3.5 w-3.5" />
+                Spotify
               </a>
             </p>
-            <p className="mt-0.5 pl-6 text-sm text-text/80">{show.summary}</p>
           </li>
         ))}
       </ul>
 
-      <p className="mt-6 border-t border-edge pt-4 text-sm text-muted">
-        Every show is also on{" "}
-        <a
-          href={PODCAST_CHANNEL}
-          target="_blank"
-          rel="noreferrer"
-          className="text-accent underline underline-offset-4"
-        >
-          YouTube
-        </a>
-        , and {VOLUMES.length} volumes have been collected into books.
-      </p>
+      <div className="mt-6 border-t border-edge pt-4">
+        <p className="flex flex-wrap gap-2">
+          <a
+            href={PODCAST_CHANNEL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded border border-edge px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted hover:border-accent hover:text-accent"
+          >
+            <YouTubeIcon />
+            All six on YouTube
+          </a>
+          <a
+            href={PODCAST_BLOG}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center rounded border border-edge px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted hover:border-accent hover:text-accent"
+          >
+            Read the blog
+          </a>
+        </p>
+        <p className="mt-3 text-sm text-muted">
+          {VOLUMES.length} volumes have been collected into books.
+        </p>
+      </div>
     </article>
   );
 }

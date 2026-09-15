@@ -9,8 +9,16 @@ import type { PodcastShow } from "./types";
  * and quietly reports where the link came from, so it is stripped.
  */
 
-/** Every show, in one place. */
+/** The YouTube channel that carries every show. */
 export const PODCAST_CHANNEL = "https://www.youtube.com/@En20minutos/podcasts";
+
+/**
+ * The written half: episode write-ups, and the shelf of collected volumes.
+ * Bilingual — it opens at `/es`.
+ */
+export const PODCAST_BLOG = "https://en20minutos.com/";
+
+/** Every show, in one place. */
 export const SHOWS: PodcastShow[] = [
   {
     id: "historia",

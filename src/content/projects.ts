@@ -19,14 +19,17 @@ export const PROJECTS: Project[] = [
     summary:
       "A personal applicant tracking system: every application, stage and follow-up in one place, instead of a spreadsheet and a memory.",
     stack: ["Next.js", "Prisma", "PostgreSQL", "NextAuth", "Supabase Storage", "shadcn/ui"],
+    url: "https://atsio.app",
+    logo: "/logos/atsio.png",
     screen: "/screens/atsio.png",
   },
   {
     id: "organis",
     name: "Organis",
     summary:
-      "A unified workspace for execution, knowledge and time — deliberately not another task manager.",
+      "Work management that stops at one tab: issues, a wiki, boards and a time tracker in a single app — the job Jira, Confluence, Asana and a timesheet tool currently do between them, minus the four-way context switch.",
     stack: ["Next.js", "TipTap", "dnd-kit", "PostgreSQL"],
+    wip: true,
     screen: "/screens/organis.png",
   },
   {
@@ -51,14 +54,18 @@ export const PROJECTS: Project[] = [
     summary:
       "SaaS for independent Spanish-speaking nutritionists: scheduling, patient records, and clinical history in one place, plus a patient portal for booking, file uploads, and progress. Freemium, so a practice can start at zero and move to Pro when volume justifies it.",
     stack: ["Next.js", "TypeScript", "PostgreSQL", "Drizzle"],
+    url: "https://www.nutriciondesk.com",
+    logo: "/logos/nutriciondesk.png",
     screen: "/screens/nutriciondesk.png",
   },
   {
     id: "racemode",
     name: "RaceMode",
     summary:
-      "A video course, written and produced end to end — curriculum, scripts, recording, and the site it ships on.",
+      "A career-acceleration program for LatAm engineers going after international roles — the frameworks, the mindset, and the interview itself. Written and produced end to end: curriculum, scripts, recording, and the site it ships on.",
     stack: ["Course design", "Video production", "Vercel"],
+    url: "https://www.racemode.dev",
+    logo: "/logos/racemode.png",
     screen: "/screens/racemode.png",
   },
   {
@@ -67,7 +74,8 @@ export const PROJECTS: Project[] = [
     summary:
       "Productised web presence for small businesses in Argentina: orders, appointments, and reservations for a flat monthly fee.",
     stack: ["Next.js", "TypeScript", "Tailwind"],
-    url: "https://empresimple.com.ar",
+    url: "https://empresimple.com",
+    logo: "/logos/empresimple.png",
     screen: "/screens/empresimple.png",
   },
   {

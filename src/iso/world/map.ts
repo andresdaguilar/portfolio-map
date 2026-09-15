@@ -320,12 +320,15 @@ function studio(): Building[] {
       label: show.nativeName,
       sub: show.summary,
     })),
+    // Four plinths to a row. A single row was sized for the four volumes that
+    // existed when it was written, and walked straight into the water the day
+    // a fifth shipped — so the row wraps rather than growing.
     ...VOLUMES.map((volume, n): Building => ({
       id: volume.id,
       kind: "monument",
-      x: i.x - 4.5 + n * 3,
+      x: i.x - 4.5 + (n % VOLUMES_PER_ROW) * 3,
       y: 0,
-      z: i.z + 2.6,
+      z: i.z + 1.4 + Math.floor(n / VOLUMES_PER_ROW) * 1.8,
       w: 1,
       d: 0.75,
       h: 0.7,
@@ -335,6 +338,8 @@ function studio(): Building[] {
     })),
   ];
 }
+
+const VOLUMES_PER_ROW = 4;
 
 /* --------------------------------------------------------------- library */
 

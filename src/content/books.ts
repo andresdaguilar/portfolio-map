@@ -79,9 +79,9 @@ export const BOOKS: Book[] = [
     id: "humanos-era-ia",
     title: "Humanos en la era de la IA",
     subtitle:
-      "Una mirada a la mente, la técnica y el sentido en la era de las máquinas pensantes",
+      "On mind, technique, and meaning in the age of thinking machines",
     excerpt:
-      "¿Qué queda de lo humano cuando las máquinas empiezan a pensar? Del fuego y la escritura a los modelos de lenguaje, un recorrido por cómo hemos ido externalizando la mente — primero en herramientas, después en máquinas, ahora en inteligencias artificiales. No es un libro técnico: es una invitación a pensar despacio en un mundo que piensa por nosotros.",
+      "What is left of the human when machines begin to think? From fire and writing to language models, this is an account of how we have steadily offloaded the mind — first into tools, then into machines, now into artificial intelligences. Not a technical book: an invitation to think slowly in a world that increasingly thinks for us. Written in Spanish.",
     color: "#b5563f",
     asin: "B0FZQ7SBKW",
     format: "paperback",
@@ -94,6 +94,10 @@ export const BOOKS: Book[] = [
  *
  * Kept apart from `BOOKS` because they belong to the shows rather than to the
  * shelf: they live at the studio, next to the podcast they came from.
+ *
+ * Volume 1 carries the English cover and edition; volume 2 the Spanish one,
+ * which is what has actually shipped. The covers are the real ones either way
+ * — a shelf that lies about which book it is helps nobody.
  */
 export const VOLUMES: Volume[] = [
   {
@@ -118,6 +122,7 @@ export const VOLUMES: Volume[] = [
     show: "libros",
     volume: 1,
     cover: "/books/libros-en.jpg",
+    asin: "B0GX2WQZFP",
   },
   {
     id: "mitologia-vol1",
@@ -125,5 +130,38 @@ export const VOLUMES: Volume[] = [
     show: "mitologia",
     volume: 1,
     cover: "/books/mitologia-en.jpg",
+    asin: "B0H2BRVCRX",
+  },
+  {
+    id: "historia-vol2",
+    title: "Historia en 20 Minutos — Volumen 2",
+    show: "historia",
+    volume: 2,
+    cover: "/books/historia-vol2-es.jpg",
+    asin: "B0HHFPPFKM",
+  },
+  {
+    id: "filosofia-vol2",
+    title: "Filosofía en 20 Minutos — Volumen 2",
+    show: "filosofia",
+    volume: 2,
+    cover: "/books/filosofia-vol2-es.jpg",
+    asin: "B0HHG9KNNQ",
+  },
+  {
+    id: "libros-vol2",
+    title: "Libros en 20 Minutos — Volumen 2",
+    show: "libros",
+    volume: 2,
+    cover: "/books/libros-vol2-es.jpg",
+    asin: "B0HHG2TT2D",
+  },
+  {
+    id: "mitologia-vol2",
+    title: "Mitología en 20 Minutos — Volumen 2",
+    show: "mitologia",
+    volume: 2,
+    cover: "/books/mitologia-vol2-es.jpg",
+    asin: "B0HHG4YX68",
   },
 ];

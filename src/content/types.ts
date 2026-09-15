@@ -79,6 +79,19 @@ export interface Project {
   summary: string;
   stack: string[];
   url?: string;
+  /**
+   * The project's own brand mark, under `/public/logos/`.
+   *
+   * Always shown on a white plate. These are marks drawn for their own sites,
+   * and several of them are dark artwork that disappears entirely against this
+   * palette — the plate is what lets a logo stay its own colours here.
+   */
+  logo?: string;
+  /**
+   * Still being built. Said out loud rather than linked to a page that is not
+   * there yet; a dead link costs more credibility than an honest "in progress".
+   */
+  wip?: boolean;
   /** Screenshot looped on the workshop monitor, under `/public/screens/`. */
   screen?: string;
 }
