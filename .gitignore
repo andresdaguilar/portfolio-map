@@ -48,3 +48,8 @@ next-env.d.ts
 # The CV PDF carries a phone number and this repository is public. It stays on
 # disk and is uploaded to the host separately; see public/README.md.
 /public/*.pdf
+
+# Kept from the repository's own .gitignore, which this history had not seen.
+.env
+.env*.local
+.pnp.js
