@@ -15,8 +15,27 @@ import type { Point, Shape } from "./types";
  * component is corrected by the aspect ratio.
  */
 
+/**
+ * Which way the character is turned.
+ *
+ * Four, because the artwork has four: the map is isometric but the poses were
+ * drawn against the screen, so "back" means walking away from the viewer
+ * rather than along any world axis.
+ */
+export type Direction = "front" | "back" | "left" | "right";
+
 export interface Character {
   at: Point;
+  direction: Direction;
+  /**
+   * The last left or right the character turned.
+   *
+   * Only the side views have a walk cycle. Moving straight up or down the
+   * screen still has to animate, so it borrows the side cycle rather than
+   * standing still and sliding — at this size, motion reads better than
+   * a technically correct static pose.
+   */
+  lastSide: "left" | "right";
   /** 1 when facing right on screen, -1 when facing left. */
   facing: 1 | -1;
   /** Advances with distance walked; drives the stride, not the clock. */
@@ -35,7 +54,21 @@ export const WALK_SPEED = 0.115;
 const STRIDE = 0.026;
 
 export function createCharacter(at: Point): Character {
-  return { at, facing: 1, phase: 0, moving: false };
+  return {
+    at,
+    direction: "front",
+    lastSide: "right",
+    facing: 1,
+    phase: 0,
+    moving: false,
+  };
+}
+
+/** The pose that matches a screen-space heading. */
+export function directionFor(dirX: number, dirY: number): Direction {
+  if (Math.abs(dirX) >= Math.abs(dirY)) return dirX >= 0 ? "right" : "left";
+  // Positive y is down the screen, which is towards the viewer.
+  return dirY > 0 ? "front" : "back";
 }
 
 export function advance(
@@ -63,9 +96,15 @@ export function advance(
   const next = stepTowards(character.at, wanted, shapes);
 
   const travelled = Math.hypot(next.x - character.at.x, (next.y - character.at.y) / aspect);
+  const direction = directionFor(dirX, dirY);
 
   return {
     at: next,
+    direction,
+    lastSide:
+      direction === "left" || direction === "right"
+        ? direction
+        : character.lastSide,
     facing: dirX === 0 ? character.facing : dirX > 0 ? 1 : -1,
     phase: character.phase + (travelled / STRIDE) * Math.PI * 2,
     moving: travelled > 1e-6,

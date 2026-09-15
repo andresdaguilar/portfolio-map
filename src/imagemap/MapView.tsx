@@ -69,7 +69,15 @@ export function MapView() {
     let live = true;
     // Quietly upgrades the figure if a drawn one has been supplied.
     loadSprite().then((loaded) => {
-      if (live) sprite.current = loaded;
+      if (!live) return;
+      sprite.current = loaded;
+      if (process.env.NODE_ENV === "development") {
+        (window as unknown as Record<string, unknown>).__map = {
+          sprite: loaded,
+          character,
+          layout,
+        };
+      }
     });
     return () => {
       live = false;
@@ -227,16 +235,23 @@ export function MapView() {
       }
 
       const feet = toCanvas(character.current.at);
-      const drawn = {
+      const shared = {
         x: feet.x,
         y: feet.y,
         height: CHARACTER_HEIGHT * layout.image.height * scale,
         phase: character.current.phase,
-        facing: character.current.facing,
         moving: character.current.moving,
       };
-      if (sprite.current) drawSprite(ctx, sprite.current, drawn);
-      else drawCharacter(ctx, drawn);
+
+      if (sprite.current) {
+        drawSprite(ctx, sprite.current, {
+          ...shared,
+          direction: character.current.direction,
+          lastSide: character.current.lastSide,
+        });
+      } else {
+        drawCharacter(ctx, { ...shared, facing: character.current.facing });
+      }
     };
 
     raf = requestAnimationFrame(frame);

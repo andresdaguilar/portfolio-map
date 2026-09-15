@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { advance, createCharacter, intentTowards, WALK_SPEED } from "./character";
+import {
+  advance,
+  createCharacter,
+  directionFor,
+  intentTowards,
+  WALK_SPEED,
+} from "./character";
 import type { Shape } from "./types";
 
 /** A 16:9 image, like the map. */
@@ -96,5 +102,53 @@ describe("intentTowards", () => {
       c = advance(c, intent, 1 / 60, open, ASPECT);
     }
     expect(Math.hypot(c.at.x - target.x, (c.at.y - target.y) / ASPECT)).toBeLessThan(0.01);
+  });
+});
+
+describe("directionFor", () => {
+  it("turns to the side when the heading is mostly sideways", () => {
+    expect(directionFor(1, 0.2)).toBe("right");
+    expect(directionFor(-1, -0.2)).toBe("left");
+  });
+
+  it("faces the viewer walking down the screen, away walking up", () => {
+    expect(directionFor(0.2, 1)).toBe("front");
+    expect(directionFor(-0.2, -1)).toBe("back");
+  });
+
+  it("prefers a side view on an exact diagonal", () => {
+    // The map's paths run diagonally, so the tie has to fall somewhere; the
+    // side poses are the only ones with a walk cycle, so they win.
+    expect(directionFor(0.7071, 0.7071)).toBe("right");
+    expect(directionFor(-0.7071, 0.7071)).toBe("left");
+  });
+});
+
+describe("the direction the character holds", () => {
+  const open: Shape[] = [
+    { id: "ground", kind: "walk", points: [
+      { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 },
+    ] },
+  ];
+
+  it("keeps the last side it turned to while walking up or down", () => {
+    let c = createCharacter({ x: 0.5, y: 0.5 });
+    c = advance(c, { x: -1, y: 0 }, 0.2, open, ASPECT);
+    expect(c.direction).toBe("left");
+    expect(c.lastSide).toBe("left");
+
+    c = advance(c, { x: 0, y: -1 }, 0.2, open, ASPECT);
+    expect(c.direction).toBe("back");
+    // Only the sides have a cycle, so walking away still animates.
+    expect(c.lastSide).toBe("left");
+  });
+
+  it("holds its pose when it stops", () => {
+    let c = createCharacter({ x: 0.5, y: 0.5 });
+    c = advance(c, { x: 0, y: 1 }, 0.2, open, ASPECT);
+    expect(c.direction).toBe("front");
+    c = advance(c, { x: 0, y: 0 }, 0.5, open, ASPECT);
+    expect(c.direction).toBe("front");
+    expect(c.moving).toBe(false);
   });
 });

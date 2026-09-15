@@ -7,6 +7,9 @@
  */
 export const MAP_IMAGE = "/map/IsoMAP.jpg";
 
-/** The character sheet, if one has been supplied. See `sprite.ts`. */
-export const CHARACTER_SHEET = "/map/character.png";
+/**
+ * The character's description, if one has been supplied. It names its own
+ * sheets, so poses and the walk cycle can come from separate renders.
+ * See `sprite.ts`.
+ */
 export const CHARACTER_META = "/map/character.json";
