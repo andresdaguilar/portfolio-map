@@ -75,7 +75,7 @@ export function IsoRoot() {
         </span>
         <span className="flex gap-4">
           <Link
-            href="/"
+            href="/inside"
             className="pointer-events-auto font-mono underline underline-offset-4"
           >
             side-scroller

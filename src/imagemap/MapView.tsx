@@ -39,7 +39,6 @@ export function MapView() {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [missing, setMissing] = useState(false);
   const sprite = useRef<Sprite | null>(null);
-  const [debug, setDebug] = useState(false);
 
   const paused = useGame((s) => s.paused);
   const nearby = useGame((s) => s.nearby);
@@ -103,7 +102,6 @@ export function MapView() {
         const near = useGame.getState().nearby;
         if (near?.target) openPanel(near.target);
       }
-      if (code === "KeyG") setDebug((d) => !d);
     };
     const up = (e: KeyboardEvent) => keys.current.delete(e.code);
     const blur = () => keys.current.clear();
@@ -232,31 +230,6 @@ export function MapView() {
         y: oy + p.y * layout.image.height * scale,
       });
 
-      if (debug) {
-        for (const shape of layout.shapes) {
-          ctx.beginPath();
-          shape.points.forEach((p, i) => {
-            const s = toCanvas(p);
-            if (i === 0) ctx.moveTo(s.x, s.y);
-            else ctx.lineTo(s.x, s.y);
-          });
-          ctx.closePath();
-          ctx.fillStyle = shape.kind === "walk" ? "#38bdf833" : "#f8717133";
-          ctx.fill();
-          ctx.strokeStyle = shape.kind === "walk" ? "#38bdf8" : "#f87171";
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-        }
-        for (const spot of layout.hotspots) {
-          const s = toCanvas(spot.at);
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, spot.radius * layout.image.width * scale, 0, Math.PI * 2);
-          ctx.strokeStyle = "#facc15";
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-        }
-      }
-
       const feet = toCanvas(character.current.at);
       const shared = {
         x: feet.x,
@@ -279,10 +252,10 @@ export function MapView() {
 
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [image, aspect, debug, fitFor]);
+  }, [image, aspect, fitFor]);
 
   const hint = useMemo(
-    () => (nearby ? nearby.label : "arrows or click to walk · G shows the ground"),
+    () => (nearby ? nearby.label : "arrows or click to walk"),
     [nearby],
   );
 
@@ -353,14 +326,9 @@ export function MapView() {
 
       <nav className="pointer-events-none absolute inset-x-0 top-0 flex justify-between p-4 text-xs text-white/70">
         <span className="font-mono drop-shadow">{hint}</span>
-        <span className="flex gap-4">
-          <Link href="/calibrate" className="pointer-events-auto font-mono underline underline-offset-4">
-            calibrate
-          </Link>
-          <Link href="/cv" className="pointer-events-auto font-mono underline underline-offset-4">
-            résumé
-          </Link>
-        </span>
+        <Link href="/cv" className="pointer-events-auto font-mono underline underline-offset-4">
+          résumé
+        </Link>
       </nav>
 
       <Panel />

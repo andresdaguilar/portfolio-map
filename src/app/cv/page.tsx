@@ -83,7 +83,7 @@ export default function CvPage() {
         <p className="mt-8 rounded border border-edge bg-mid px-4 py-3 text-sm text-muted">
           There is a{" "}
           <Link href="/" className="text-accent underline underline-offset-4">
-            playable version of this page
+            map you can walk
           </Link>
           . This one is faster.
         </p>

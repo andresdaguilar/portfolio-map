@@ -1,11 +1,21 @@
+import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+import { PROFILE } from "@/content";
 
 /**
- * The game never server-renders: it needs a WebGL context and `window`, and
- * prerendering a canvas buys nothing. `/cv` carries the content for crawlers.
+ * The portfolio: a map you walk.
+ *
+ * Never server-rendered — it needs a canvas and `window`, and prerendering one
+ * buys nothing. `/cv` carries the same content as plain HTML, and that is what
+ * crawlers and screen readers read.
  */
-const GameRoot = dynamic(() => import("@/game/GameRoot").then((m) => m.GameRoot));
+const MapView = dynamic(() => import("@/imagemap/MapView").then((m) => m.MapView));
+
+export const metadata: Metadata = {
+  title: `${PROFILE.name} — ${PROFILE.title}`,
+  description: PROFILE.summary,
+};
 
 export default function Home() {
-  return <GameRoot />;
+  return <MapView />;
 }
