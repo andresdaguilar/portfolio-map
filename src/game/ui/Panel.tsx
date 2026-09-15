@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { EXPERIENCE, formatRange } from "@/content";
+import {
+  BOOKS,
+  CREDENTIALS,
+  EXPERIENCE,
+  LANGUAGES,
+  MARKETPLACES,
+  PROFILE,
+  PROJECTS,
+  SHOWS,
+  formatRange,
+  kindleLink,
+} from "@/content";
 import { useGame } from "../core/store";
 
 /**
@@ -66,6 +77,11 @@ export function Panel() {
         onClick={(e) => e.stopPropagation()}
       >
         {panel.kind === "experience" && <ExperiencePanel id={panel.id} />}
+        {panel.kind === "project" && <ProjectPanel id={panel.id} />}
+        {panel.kind === "book" && <BookPanel id={panel.id} />}
+        {panel.kind === "show" && <ShowPanel id={panel.id} />}
+        {panel.kind === "credentials" && <CredentialsPanel />}
+        {panel.kind === "contact" && <ContactPanel />}
 
         <button
           ref={closeButton}
@@ -119,6 +135,153 @@ function ExperiencePanel({ id }: { id: string }) {
           </p>
         </section>
       ))}
+    </article>
+  );
+}
+
+function Heading({ title, sub }: { title: string; sub?: string }) {
+  return (
+    <header>
+      <h2 className="text-2xl font-semibold tracking-tight text-text">{title}</h2>
+      {sub && <p className="mt-1 text-sm text-muted">{sub}</p>}
+    </header>
+  );
+}
+
+function ProjectPanel({ id }: { id: string }) {
+  const project = PROJECTS.find((p) => p.id === id);
+  if (!project) return null;
+
+  return (
+    <article>
+      <Heading title={project.name} />
+      <p className="mt-4 leading-relaxed text-text/90">{project.summary}</p>
+      <p className="mt-4 font-mono text-xs text-muted">
+        {project.stack.join(" · ")}
+      </p>
+      {project.url && (
+        <a
+          href={project.url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 inline-block text-accent underline underline-offset-4"
+        >
+          {project.url.replace(/^https?:\/\//, "")}
+        </a>
+      )}
+    </article>
+  );
+}
+
+function BookPanel({ id }: { id: string }) {
+  const book = BOOKS.find((b) => b.id === id);
+  if (!book) return null;
+  const show = SHOWS.find((s) => s.id === book.show);
+
+  return (
+    <article>
+      <Heading title={book.title} sub={show?.nativeName} />
+      <div className="mt-5 flex flex-wrap items-start gap-5">
+        {/* eslint-disable-next-line @next/next/no-img-element -- a static
+            cover in a modal; the image component's layout machinery buys
+            nothing here. */}
+        <img
+          src={book.cover}
+          alt={`Cover of ${book.title}`}
+          className="w-32 rounded border border-edge"
+        />
+        <div className="flex-1">
+          {show && <p className="leading-relaxed text-text/90">{show.summary}</p>}
+          {book.asin ? (
+            <p className="mt-4 font-mono text-sm">
+              <span className="text-muted">Kindle: </span>
+              {MARKETPLACES.map((market) => (
+                <a
+                  key={market}
+                  href={kindleLink(book.asin!, market)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mr-2 text-muted hover:text-accent"
+                >
+                  {market.toUpperCase()}
+                </a>
+              ))}
+            </p>
+          ) : (
+            <p className="mt-4 font-mono text-sm text-muted">Not yet published.</p>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ShowPanel({ id }: { id: string }) {
+  const show = SHOWS.find((s) => s.id === id);
+  if (!show) return null;
+
+  return (
+    <article>
+      <Heading title={show.name} sub={show.nativeName} />
+      <p className="mt-4 leading-relaxed text-text/90">{show.summary}</p>
+      <p className="mt-4 font-mono text-sm text-accent">
+        {show.episodes} episodes
+      </p>
+    </article>
+  );
+}
+
+function CredentialsPanel() {
+  const degree = CREDENTIALS.find((c) => c.kind === "degree");
+  const certificates = CREDENTIALS.filter((c) => c.kind === "certification");
+
+  return (
+    <article>
+      <Heading title="Education & Certifications" />
+      {degree && (
+        <p className="mt-4 text-text">
+          <span className="font-medium">{degree.title}</span>
+          <span className="text-muted"> — {degree.issuer}</span>
+          {degree.year && <span className="font-mono text-muted"> {degree.year}</span>}
+        </p>
+      )}
+      <ul className="mt-4 space-y-2 border-t border-edge pt-4">
+        {certificates.map((c) => (
+          <li key={c.id} className="flex flex-wrap gap-x-3 text-sm">
+            <span className="text-text">{c.title}</span>
+            <span className="text-muted">{c.issuer}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 font-mono text-xs text-muted">
+        {LANGUAGES.map((l) => `${l.name} (${l.level})`).join(" · ")}
+      </p>
+    </article>
+  );
+}
+
+function ContactPanel() {
+  const links = [
+    { label: "Email", href: `mailto:${PROFILE.email}`, text: PROFILE.email },
+    { label: "LinkedIn", href: PROFILE.linkedin, text: "linkedin.com/in/andresaguilar" },
+    { label: "GitHub", href: PROFILE.github, text: "github.com/andresdaguilar" },
+    { label: "Résumé", href: PROFILE.resume, text: "Download the PDF" },
+  ];
+
+  return (
+    <article>
+      <Heading title={PROFILE.name} sub={PROFILE.title} />
+      <p className="mt-4 leading-relaxed text-text/90">{PROFILE.summary}</p>
+      <ul className="mt-5 space-y-2 border-t border-edge pt-4">
+        {links.map((link) => (
+          <li key={link.label} className="flex gap-3 text-sm">
+            <span className="w-20 shrink-0 font-mono text-muted">{link.label}</span>
+            <a href={link.href} className="text-accent underline underline-offset-4">
+              {link.text}
+            </a>
+          </li>
+        ))}
+      </ul>
     </article>
   );
 }

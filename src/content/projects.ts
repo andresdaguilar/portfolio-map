@@ -30,6 +30,22 @@ export const PROJECTS: Project[] = [
     screen: "/screens/founderos.png",
   },
   {
+    id: "nutriciondesk",
+    name: "NutricionDesk",
+    summary:
+      "SaaS for independent Spanish-speaking nutritionists: scheduling, patient records, and clinical history in one place, plus a patient portal for booking, file uploads, and progress. Freemium, so a practice can start at zero and move to Pro when volume justifies it.",
+    stack: ["Next.js", "TypeScript", "PostgreSQL", "Drizzle"],
+    screen: "/screens/nutriciondesk.png",
+  },
+  {
+    id: "racemode",
+    name: "RaceMode",
+    summary:
+      "A video course, written and produced end to end — curriculum, scripts, recording, and the site it ships on.",
+    stack: ["Course design", "Video production", "Vercel"],
+    screen: "/screens/racemode.png",
+  },
+  {
     id: "empresimple",
     name: "EmpreSimple",
     summary:
