@@ -51,3 +51,18 @@ export function platformAt(
   }
   return best;
 }
+
+/**
+ * Is there ground to stand on here?
+ *
+ * With the world broken into islands this is what keeps the walker out of the
+ * water. Anywhere not covered by a platform — island, bridge or terrace step —
+ * is simply not somewhere you can be.
+ */
+export function isWalkable(
+  x: number,
+  z: number,
+  platforms: readonly Platform[],
+): boolean {
+  return platforms.some((p) => contains(p, x, z));
+}

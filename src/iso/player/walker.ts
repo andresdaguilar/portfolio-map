@@ -1,6 +1,6 @@
 import { ISO_CAMERA, ISO_PHYSICS, WALKER } from "../core/constants";
 import { type Footprint, resolve, screenToWorld } from "../core/nav";
-import { groundHeightAt, type Platform } from "../core/terrain";
+import { groundHeightAt, isWalkable, type Platform } from "../core/terrain";
 import { input } from "@/game/core/input";
 
 export type WalkState = "idle" | "walk" | "run";
@@ -54,6 +54,23 @@ export function angleDelta(from: number, to: number): number {
   return delta;
 }
 
+/** The furthest part of an intended move that still has ground under it. */
+function pickFooting(
+  wanted: { x: number; z: number },
+  platforms: readonly Platform[],
+): { x: number; z: number } {
+  if (platforms.length === 0) return wanted;
+  if (isWalkable(wanted.x, wanted.z, platforms)) return wanted;
+
+  const alongX = { x: wanted.x, z: walker.z };
+  if (isWalkable(alongX.x, alongX.z, platforms)) return alongX;
+
+  const alongZ = { x: walker.x, z: wanted.z };
+  if (isWalkable(alongZ.x, alongZ.z, platforms)) return alongZ;
+
+  return { x: walker.x, z: walker.z };
+}
+
 function step(
   dt: number,
   blockers: readonly Footprint[],
@@ -70,12 +87,17 @@ function step(
   walker.vx = approach(walker.vx, dir.x * speed, rate, dt);
   walker.vz = approach(walker.vz, dir.z * speed, rate, dt);
 
-  const next = resolve(
+  const wanted = resolve(
     walker.x + walker.vx * dt,
     walker.z + walker.vz * dt,
     WALKER.radius,
     blockers,
   );
+
+  // The world is islands with water between them, so a step that lands on
+  // nothing is refused. Each axis is retried on its own first, which turns a
+  // blocked diagonal into a slide along the shoreline rather than a dead stop.
+  const next = pickFooting(wanted, platforms);
 
   // Losing ground to a wall should bleed off speed in that direction, or the
   // walker keeps grinding at full tilt against a building.

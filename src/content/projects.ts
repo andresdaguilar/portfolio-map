@@ -14,6 +14,22 @@ export const PROJECTS: Project[] = [
     screen: "/screens/en20minutos.png",
   },
   {
+    id: "atsio",
+    name: "ATSio",
+    summary:
+      "A personal applicant tracking system: every application, stage and follow-up in one place, instead of a spreadsheet and a memory.",
+    stack: ["Next.js", "Prisma", "PostgreSQL", "NextAuth", "Supabase Storage", "shadcn/ui"],
+    screen: "/screens/atsio.png",
+  },
+  {
+    id: "organis",
+    name: "Organis",
+    summary:
+      "A unified workspace for execution, knowledge and time — deliberately not another task manager.",
+    stack: ["Next.js", "TipTap", "dnd-kit", "PostgreSQL"],
+    screen: "/screens/organis.png",
+  },
+  {
     id: "hivensis",
     name: "Hivensis",
     summary:

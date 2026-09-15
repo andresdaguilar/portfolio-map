@@ -10,6 +10,7 @@ export type PanelTarget =
   | { kind: "project"; id: string }
   | { kind: "show"; id: string }
   | { kind: "book"; id: string }
+  | { kind: "volume"; id: string }
   | { kind: "contact" }
   | { kind: "travel" }
   | null;

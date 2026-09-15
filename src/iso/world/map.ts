@@ -1,41 +1,38 @@
-import { BOOKS, CREDENTIALS, EXPERIENCE, PROJECTS, SHOWS } from "@/content";
+import { BOOKS, CREDENTIALS, EXPERIENCE, PROJECTS, SHOWS, VOLUMES } from "@/content";
 import type { Footprint } from "../core/nav";
 import type { Platform } from "../core/terrain";
 import type { PanelTarget } from "@/game/core/store";
+import { ISLAND_PLATFORMS, island } from "./islands";
 
 /**
- * The town, laid out from the content.
+ * What stands on the islands.
  *
- * Nothing here is a closed building. The career is a wide terrace that climbs
- * in shallow steps, the studio is an open deck, the library is a floor with
- * shelves on it and no roof. In an isometric view a walled building is mostly
- * an obstacle that hides its own contents — an open plan lets the visitor see
- * what a place holds before deciding to walk into it.
+ * Nothing is enclosed. In a fixed isometric view a walled building hides its
+ * own contents and turns into a box you walk around, so the vocabulary is
+ * decks, colonnades, shelves, stones and open stages — places you can read
+ * from across the water before deciding to cross to them.
  */
 
-export interface District {
-  id: string;
-  name: string;
-  caption: string;
-  x: number;
-  z: number;
-  w: number;
-  d: number;
-  color: string;
-}
-
 export type BuildingKind =
+  | "desk"
   | "plaque"
-  | "columns"
-  | "shelf"
-  | "table"
-  | "mic"
-  | "totem"
+  | "university"
+  | "fountain"
   | "monument"
-  | "stall"
-  | "pavilion"
-  | "court"
-  | "pool";
+  | "roundtable"
+  | "console"
+  | "acoustic"
+  | "totem"
+  | "bookcase"
+  | "book-display"
+  | "armchair"
+  | "billboard"
+  | "surfboard"
+  | "weights"
+  | "bench"
+  | "piano"
+  | "rackets"
+  | "mat";
 
 export interface Building {
   id: string;
@@ -48,10 +45,9 @@ export interface Building {
   d: number;
   h: number;
   color: string;
-  roof?: string;
   accent?: string;
   label?: string;
-  /** Second line on a plaque: the role, the years. */
+  /** Second line: the role and years, the episode count, the status. */
   sub?: string;
   rotation?: number;
 }
@@ -67,35 +63,33 @@ export interface IsoPoi {
   secret?: { id: string; line: string };
 }
 
-const C = {
+export const C = {
   stone: "#cfc4ae",
-  stoneDark: "#b3a691",
+  stoneDark: "#a89a80",
   timber: "#9c7a54",
-  canvas: "#d8c9a8",
-  marble: "#e3ddd0",
-  slate: "#7a8a94",
-  hedge: "#5f7d4a",
-  deck: "#c3b391",
+  timberDark: "#6f5334",
+  marble: "#e6e0d3",
+  slate: "#6f7d88",
+  ink: "#2c3440",
+  screen: "#4a6b86",
   accent: "#e8a33d",
+  hedge: "#5f7d4a",
 } as const;
 
 /* ---------------------------------------------------------------- terrace */
 
 /**
- * The career terrace.
+ * The career terrace: a wide staircase that turns a corner.
  *
- * Eight landings turning a corner: five climbing one way, three more after the
- * turn. The rise between them is deliberately small — the point is that you
- * are always going up, not that the climb is hard. An L rather than a straight
- * run so the whole thing sits in frame at an angle instead of running off the
- * side of the screen.
+ * Each landing is one job, one shallow step above the last, with a desk on it.
+ * The rise is deliberately small — the point is that it never stops going up,
+ * not that the climb is hard.
  */
 const TERRACE = {
-  landing: 8,
-  rise: 0.45,
-  startX: -4,
-  startZ: -4,
-  /** Landings before the corner. */
+  landing: 7,
+  rise: 0.4,
+  x: -64,
+  z: 20,
   firstArm: 5,
 } as const;
 
@@ -109,383 +103,366 @@ export interface Landing {
   y: number;
   size: number;
   accent: string;
+  /** Which leg of the L this landing is on. Decides where the desk goes. */
+  arm: "first" | "second";
 }
 
-function terraceLandings(): Landing[] {
-  return EXPERIENCE.map((job, i) => {
-    const first = job.roles[0];
-    const last = job.roles[job.roles.length - 1];
-    const beforeCorner = i < TERRACE.firstArm;
+export const LANDINGS: Landing[] = EXPERIENCE.map((job, i) => {
+  const first = job.roles[0];
+  const last = job.roles[job.roles.length - 1];
+  const beforeCorner = i < TERRACE.firstArm;
 
-    return {
-      id: job.id,
-      company: job.company,
-      role: last.title,
-      years: `${first.from.slice(0, 4)} — ${last.to ? last.to.slice(0, 4) : "now"}`,
-      // The first arm runs away from the plaza; the second turns left.
-      x: beforeCorner
-        ? TERRACE.startX
-        : TERRACE.startX - (i - TERRACE.firstArm + 1) * TERRACE.landing,
-      z: beforeCorner
-        ? TERRACE.startZ - i * TERRACE.landing
-        : TERRACE.startZ - (TERRACE.firstArm - 1) * TERRACE.landing,
-      y: i * TERRACE.rise,
-      size: TERRACE.landing,
-      accent: job.set.practicalLight,
-    };
+  return {
+    id: job.id,
+    company: job.company,
+    role: last.title,
+    years: `${first.from.slice(0, 4)} — ${last.to ? last.to.slice(0, 4) : "now"}`,
+    x: beforeCorner ? TERRACE.x : TERRACE.x + (i - TERRACE.firstArm + 1) * TERRACE.landing,
+    z: beforeCorner
+      ? TERRACE.z - i * TERRACE.landing
+      : TERRACE.z - (TERRACE.firstArm - 1) * TERRACE.landing,
+    y: i * TERRACE.rise,
+    size: TERRACE.landing,
+    accent: job.set.practicalLight,
+    arm: beforeCorner ? "first" : "second",
+  };
+});
+
+/**
+ * A desk and a plaque on every landing, pushed to one side.
+ *
+ * The middle of the landing has to stay clear: the first version put the desk
+ * dead centre and the walker simply could not get past it to the next step.
+ * The first leg of the L runs along Z, so its furniture moves aside in X; the
+ * second leg runs along X, so its furniture moves aside in Z.
+ */
+function terrace(): Building[] {
+  /**
+   * The desk sits hard against the parapet rather than near it.
+   *
+   * Leaving a little daylight between them creates a slot narrower than the
+   * walker, which is worse than no gap at all — you get wedged instead of
+   * walking past. Flush, the whole rest of the landing is one clear lane.
+   */
+  const aside = 1.85;
+  const plaqueAside = 2.0;
+  const deskLong = 3;
+  const deskShort = 1.6;
+
+  return LANDINGS.flatMap((l): Building[] => {
+    // The first leg runs along Z and the second along X, so the furniture
+    // turns with the corner to keep the same clearance on both.
+    const alongZ = l.arm === "first";
+    return [
+      {
+        id: l.id,
+        kind: "desk",
+        x: alongZ ? l.x - aside : l.x,
+        y: l.y,
+        // The second leg puts its desks on the far side: the walker arrives
+        // from the first leg pressed against the near edge, and furniture
+        // there would meet them head-on at the corner.
+        z: alongZ ? l.z : l.z + aside,
+        w: alongZ ? deskLong : deskShort,
+        d: alongZ ? deskShort : deskLong,
+        h: 1.5,
+        color: C.timber,
+        accent: l.accent,
+        label: l.company,
+        sub: `${l.role} · ${l.years}`,
+        rotation: alongZ ? 0 : Math.PI / 2,
+      },
+      {
+        id: `plaque-${l.id}`,
+        kind: "plaque",
+        x: alongZ ? l.x + plaqueAside : l.x,
+        y: l.y,
+        z: alongZ ? l.z : l.z - plaqueAside,
+        w: alongZ ? 1.8 : 0.4,
+        d: alongZ ? 0.4 : 1.8,
+        h: 0.95,
+        color: C.stone,
+        accent: l.accent,
+        label: l.company,
+        rotation: alongZ ? 0 : Math.PI / 2,
+      },
+    ];
   });
 }
 
-export const LANDINGS: Landing[] = terraceLandings();
+/* --------------------------------------------------------------- academy */
 
-/* -------------------------------------------------------------- districts */
-
-export const DISTRICTS: District[] = [
-  {
-    id: "work",
-    name: "The Climb",
-    caption: "Twenty years, eight steps.",
-    x: -16,
-    z: -20,
-    w: 18,
-    d: 20,
-    color: C.stoneDark,
-  },
-  {
-    id: "education",
-    name: "The Academy",
-    caption: "A degree and five certificates.",
-    x: 26,
-    z: -20,
-    w: 11,
-    d: 10,
-    color: C.marble,
-  },
-  {
-    id: "library",
-    name: "The Library",
-    caption: "Four volumes, open to the sky.",
-    x: 34,
-    z: 8,
-    w: 11,
-    d: 10,
-    color: C.timber,
-  },
-  {
-    id: "studio",
-    name: "The Studio",
-    caption: "Six shows, recorded outdoors.",
-    x: 14,
-    z: 30,
-    w: 11,
-    d: 9,
-    color: C.slate,
-  },
-  {
-    id: "yards",
-    name: "The Yards",
-    caption: "Things built after hours.",
-    x: -14,
-    z: 30,
-    w: 21,
-    d: 9,
-    color: C.timber,
-  },
-  {
-    id: "commons",
-    name: "The Commons",
-    caption: "Where the week goes.",
-    x: -40,
-    z: 6,
-    w: 14,
-    d: 13,
-    color: C.hedge,
-  },
-];
-
-const district = (id: string) => DISTRICTS.find((d) => d.id === id)!;
-
-/* ------------------------------------------------------------- structures */
-
-/** One low stone per landing, carrying the company, the role and the years. */
-function terracePlaques(): Building[] {
-  return LANDINGS.map((landing) => ({
-    id: landing.id,
-    kind: "plaque" as const,
-    x: landing.x,
-    y: landing.y,
-    z: landing.z - 1.6,
-    w: 3.4,
-    d: 0.5,
-    h: 1.25,
-    color: C.stone,
-    accent: landing.accent,
-    label: landing.company,
-    sub: `${landing.role} · ${landing.years}`,
-  }));
-}
-
-/** An open colonnade: columns and a roof, no walls. */
 function academy(): Building[] {
-  const d = district("education");
+  const i = island("education");
   const degree = CREDENTIALS.find((c) => c.kind === "degree")!;
   const certificates = CREDENTIALS.filter((c) => c.kind === "certification");
 
   return [
     {
       id: degree.id,
-      kind: "columns",
-      x: d.x,
-      y: ACADEMY_DECK.y,
-      z: d.z - 2,
-      w: 11,
-      d: 7,
-      h: 5,
+      kind: "university",
+      x: i.x,
+      y: 0,
+      z: i.z - 4,
+      w: 18,
+      d: 10,
+      h: 8,
       color: C.marble,
-      roof: C.stoneDark,
       accent: C.accent,
-      label: degree.issuer,
-      sub: degree.title,
+      label: degree.title,
+      sub: degree.issuer,
     },
-    ...certificates.map((c, i): Building => ({
+    {
+      id: "fountain",
+      kind: "fountain",
+      x: i.x,
+      y: 0,
+      z: i.z + 6,
+      w: 5,
+      d: 5,
+      h: 1.5,
+      color: C.stone,
+      accent: "#6fa8c7",
+      label: "Fountain",
+    },
+    ...certificates.map((c, n): Building => ({
       id: c.id,
       kind: "monument",
-      x: d.x - 6.4 + i * 3.2,
-      y: ACADEMY_DECK.y,
-      z: d.z + 5,
-      w: 1.5,
-      d: 1.5,
-      h: 2.4,
+      x: i.x - 10 + n * 5,
+      y: 0,
+      z: i.z + 11,
+      w: 1.4,
+      d: 1.4,
+      h: 2.2,
       color: C.marble,
       accent: C.accent,
       label: c.title,
+      sub: c.issuer,
     })),
   ];
 }
 
-/** A floor, shelves, a reading table. No roof. */
-function library(): Building[] {
-  const d = district("library");
+/* ---------------------------------------------------------------- studio */
 
-  const shelves: Building[] = [0, 1, 2].map((i) => ({
-    id: `shelf-${i}`,
-    kind: "shelf",
-    x: d.x - 5.4 + i * 5.4,
-    y: LIBRARY_DECK.y,
-    z: d.z - 5.5,
-    w: 4.2,
-    d: 0.9,
-    h: 3,
-    color: C.timber,
-    accent: C.accent,
-    label: i === 1 ? "Read" : undefined,
-  }));
-
-  const plinths = BOOKS.map((book, i): Building => ({
-    id: book.id,
-    kind: "monument",
-    x: d.x - 4.5 + (i % 2) * 3.4,
-    y: LIBRARY_DECK.y,
-    z: d.z + 1.5 + Math.floor(i / 2) * 3.4,
-    w: 1.4,
-    d: 1.1,
-    h: 1.1,
-    color: C.marble,
-    accent: SHOWS.find((s) => s.id === book.show)?.color ?? C.accent,
-    label: book.title,
-  }));
+function studio(): Building[] {
+  const i = island("studio");
 
   return [
-    ...shelves,
-    ...plinths,
     {
-      id: "reading-table",
-      kind: "table",
-      x: d.x + 4,
-      y: LIBRARY_DECK.y,
-      z: d.z + 3,
-      w: 3.4,
-      d: 2,
-      h: 0.95,
-      color: C.timber,
+      id: "acoustic",
+      kind: "acoustic",
+      x: i.x,
+      y: 0,
+      z: i.z - 8,
+      w: 16,
+      d: 0.6,
+      h: 5,
+      color: C.timberDark,
       accent: C.accent,
-      label: "Reading table",
+      label: "On air",
+      sub: "Six shows, recorded outdoors",
     },
-  ];
-}
-
-/** An open-air stage: a microphone and six totems, one per show. */
-function studio(): Building[] {
-  const d = district("studio");
-
-  const totems = SHOWS.map((show, i): Building => {
-    // Arranged in an arc facing the microphone.
-    const angle = -Math.PI * 0.72 + (i / (SHOWS.length - 1)) * Math.PI * 1.44;
-    return {
+    {
+      id: "microphone",
+      kind: "roundtable",
+      x: i.x,
+      y: 0,
+      z: i.z - 2,
+      w: 5,
+      d: 5,
+      h: 1.1,
+      color: C.timber,
+      accent: C.ink,
+      label: "The table",
+      sub: "Where the six shows get recorded",
+    },
+    {
+      id: "console",
+      kind: "console",
+      x: i.x + 8,
+      y: 0,
+      z: i.z - 2,
+      w: 3,
+      d: 1.6,
+      h: 1.1,
+      color: C.slate,
+      accent: "#7fd4a8",
+      label: "The desk",
+      sub: "Cut, level, publish",
+    },
+    ...SHOWS.map((show, n): Building => ({
       id: show.id,
       kind: "totem",
-      x: d.x + Math.sin(angle) * 6.6,
-      y: STUDIO_DECK.y,
-      z: d.z + Math.cos(angle) * 5.2,
-      w: 1.1,
+      x: i.x - 10 + n * 4,
+      y: 0,
+      z: i.z + 8,
+      w: 2.4,
       d: 0.5,
-      h: 2.8,
+      h: 3,
       color: C.slate,
       accent: show.color,
       label: show.nativeName,
       sub: `${show.episodes} episodes`,
-    };
-  });
-
-  return [
-    {
-      id: "microphone",
-      kind: "mic",
-      x: d.x,
-      y: STUDIO_DECK.y,
-      z: d.z,
-      w: 0.8,
-      d: 0.8,
-      h: 2.2,
-      color: C.slate,
-      accent: C.accent,
-      label: "On air",
-    },
-    ...totems,
+    })),
+    ...VOLUMES.map((volume, n): Building => ({
+      id: volume.id,
+      kind: "monument",
+      x: i.x - 6 + n * 4,
+      y: 0,
+      z: i.z + 3,
+      w: 1.2,
+      d: 0.9,
+      h: 0.9,
+      color: C.marble,
+      accent: SHOWS.find((s) => s.id === volume.show)?.color ?? C.accent,
+      label: volume.title,
+    })),
   ];
 }
 
-function yards(): Building[] {
-  const d = district("yards");
-  const perRow = 6;
-  const spacing = 7;
+/* --------------------------------------------------------------- library */
 
-  return PROJECTS.map((project, i): Building => {
-    const row = i < perRow ? 0 : 1;
-    const column = i % perRow;
-    return {
-      id: project.id,
-      kind: "stall",
-      x: d.x - spacing * 2.5 + column * spacing,
+function library(): Building[] {
+  const i = island("library");
+
+  return [
+    ...[0, 1, 2].map((n): Building => ({
+      id: `bookcase-${n}`,
+      kind: "bookcase",
+      x: i.x - 9 + n * 9,
       y: 0,
-      z: d.z + (row === 0 ? -4.5 : 5),
-      w: 4.4,
-      d: 3.6,
-      h: 3,
-      color: C.timber,
-      roof: C.canvas,
+      z: i.z - 8,
+      w: 7,
+      d: 1.1,
+      h: 4.2,
+      color: C.timberDark,
       accent: C.accent,
-      label: project.name,
-    };
-  });
+    })),
+    {
+      id: "shelf",
+      kind: "book-display",
+      x: i.x,
+      y: 0,
+      z: i.z + 2,
+      w: 11,
+      d: 1.6,
+      h: 1.1,
+      color: C.timber,
+      accent: C.accent,
+      label: "Written",
+      sub: `${BOOKS.length} books`,
+    },
+    {
+      id: "armchair",
+      kind: "armchair",
+      x: i.x + 8,
+      y: 0,
+      z: i.z + 5,
+      w: 2.2,
+      d: 2.2,
+      h: 1.5,
+      color: "#7a5c52",
+      accent: C.accent,
+      label: "Read",
+      sub: "The other half of writing",
+    },
+    ...BOOKS.map((book, n): Building => ({
+      id: book.id,
+      kind: "monument",
+      x: i.x - 5 + (n % 3) * 5,
+      y: 0,
+      z: i.z + 7 + Math.floor(n / 3) * 3.5,
+      w: 1,
+      d: 0.8,
+      h: 0.8,
+      color: C.marble,
+      accent: book.color,
+      label: book.title,
+      sub: book.status === "published" ? "Published" : "In progress",
+    })),
+  ];
 }
+
+/* ---------------------------------------------------------------- commons */
 
 function commons(): Building[] {
-  const d = district("commons");
+  const i = island("commons");
   return [
-    {
-      id: "piano",
-      kind: "pavilion",
-      x: d.x - 4,
-      y: 0,
-      z: d.z - 4,
-      w: 6,
-      d: 6,
-      h: 4,
-      color: C.timber,
-      roof: C.slate,
-      accent: C.accent,
-      label: "Piano",
-    },
-    {
-      id: "tennis",
-      kind: "court",
-      x: d.x + 5,
-      y: 0,
-      z: d.z - 3,
-      w: 10,
-      d: 6,
-      h: 0.15,
-      color: C.hedge,
-      accent: "#e8e3d6",
-      label: "Tennis",
-    },
-    {
-      id: "gym",
-      kind: "pavilion",
-      x: d.x + 5,
-      y: 0,
-      z: d.z + 6,
-      w: 5,
-      d: 4,
-      h: 3,
-      color: C.slate,
-      roof: C.slate,
-      accent: C.accent,
-      label: "Gym",
-    },
-    {
-      id: "surf",
-      kind: "pool",
-      x: d.x - 5,
-      y: 0,
-      z: d.z + 6,
-      w: 8,
-      d: 5,
-      h: 0.1,
-      color: "#4f7f9e",
-      accent: "#e8e3d6",
-      label: "Surf",
-    },
+    { id: "surf", kind: "surfboard", x: i.x - 8, y: 0, z: i.z - 5, w: 0.8, d: 0.4, h: 2.8, color: "#e8e3d6", accent: "#4f8fb0", label: "Surf" },
+    { id: "gym", kind: "weights", x: i.x - 3, y: 0, z: i.z - 5, w: 2.6, d: 1.2, h: 1.6, color: C.ink, accent: C.accent, label: "Gym" },
+    { id: "bench", kind: "bench", x: i.x - 3, y: 0, z: i.z - 1, w: 2.4, d: 1, h: 0.9, color: C.ink, accent: C.accent, label: "Bench" },
+    { id: "piano", kind: "piano", x: i.x + 5, y: 0, z: i.z - 4, w: 3.2, d: 1.4, h: 1.3, color: "#23282f", accent: C.marble, label: "Piano" },
+    { id: "tennis", kind: "rackets", x: i.x + 6, y: 0, z: i.z + 3, w: 1.6, d: 1, h: 1.2, color: C.timber, accent: "#d8e05a", label: "Tennis" },
+    { id: "mat", kind: "mat", x: i.x - 4, y: 0, z: i.z + 5, w: 3.4, d: 1.6, h: 0.1, color: "#5f8fa8", accent: "#e8e3d6", label: "Mat" },
   ];
 }
 
-/* --------------------------------------------------------------- platforms */
+/* ----------------------------------------------------------------- yards */
 
-/** Low decks under the open districts, so they read as places, not clearings. */
-export const ACADEMY_DECK = { y: 0.3 };
-export const LIBRARY_DECK = { y: 0.25 };
-export const STUDIO_DECK = { y: 0.4 };
+function yards(): Building[] {
+  const i = island("yards");
+  const perRow = 5;
+  const spacing = 5.4;
 
-function deck(id: string, y: number, pad = 2): Platform {
-  const d = district(id);
-  return {
-    id: `deck-${id}`,
-    x: d.x - d.w / 2 - pad,
-    z: d.z - d.d / 2 - pad,
-    w: d.w + pad * 2,
-    d: d.d + pad * 2,
-    y,
-  };
+  return PROJECTS.map((project, n): Building => {
+    const row = Math.floor(n / perRow);
+    const column = n % perRow;
+    return {
+      id: project.id,
+      kind: "billboard",
+      x: i.x - spacing * 2 + column * spacing,
+      y: 0,
+      z: i.z - 9 + row * 8,
+      w: 3.6,
+      d: 0.4,
+      h: 4.4,
+      color: C.slate,
+      accent: C.screen,
+      label: project.name,
+      sub: project.stack[0],
+    };
+  });
 }
 
+/* ------------------------------------------------------------- assembled */
+
+export const BUILDINGS: Building[] = [
+  ...terrace(),
+  ...academy(),
+  ...studio(),
+  ...library(),
+  ...commons(),
+  ...yards(),
+];
+
+/** Low or flat things are walked over, not into. */
+const WALKABLE: BuildingKind[] = ["plaque", "monument", "mat"];
+
+const RAILING_HEIGHT = 0.55;
+
 /**
- * Low parapets around the open edges of the terrace.
+ * Parapets around the open edges of the terrace.
  *
- * Without them you can walk straight off the top step and drop three units to
- * the grass, which with a smoothed height looks like sinking through the floor
- * rather than stepping down. Generated from the landings themselves: a side
- * with a neighbouring landing is a way through, a side without one is an edge.
- * The first landing's approach from the plaza is left open — that is the way in.
+ * Without them you walk off the top step and drop nearly three units, which
+ * with a smoothed height reads as sinking rather than stepping down. Generated
+ * from the landings: a side with a neighbour is a way through, a side without
+ * one is an edge. The approach from the island is left open.
  */
 function terraceRailings(): Footprint[] {
   const half = TERRACE.landing / 2;
   const key = (x: number, z: number) => `${Math.round(x)}:${Math.round(z)}`;
   const occupied = new Set(LANDINGS.map((l) => key(l.x, l.z)));
-  const thickness = 0.45;
+  const thickness = 0.4;
   const out: Footprint[] = [];
 
   for (const landing of LANDINGS) {
-    const sides = [
+    for (const side of [
       { dx: TERRACE.landing, dz: 0 },
       { dx: -TERRACE.landing, dz: 0 },
       { dx: 0, dz: TERRACE.landing },
       { dx: 0, dz: -TERRACE.landing },
-    ];
-
-    for (const side of sides) {
+    ]) {
       if (occupied.has(key(landing.x + side.dx, landing.z + side.dz))) continue;
-      // The way in from the plaza.
       if (landing.id === LANDINGS[0].id && side.dz > 0) continue;
 
       const horizontal = side.dx !== 0;
@@ -498,37 +475,23 @@ function terraceRailings(): Footprint[] {
       });
     }
   }
-
   return out;
 }
 
 export const RAILINGS: Footprint[] = terraceRailings();
+export const RAIL_HEIGHT = RAILING_HEIGHT;
 
 export const PLATFORMS: Platform[] = [
-  ...LANDINGS.map((landing) => ({
-    id: `landing-${landing.id}`,
-    x: landing.x - landing.size / 2,
-    z: landing.z - landing.size / 2,
-    w: landing.size,
-    d: landing.size,
-    y: landing.y,
+  ...ISLAND_PLATFORMS,
+  ...LANDINGS.map((l) => ({
+    id: `landing-${l.id}`,
+    x: l.x - l.size / 2,
+    z: l.z - l.size / 2,
+    w: l.size,
+    d: l.size,
+    y: l.y,
   })),
-  deck("education", ACADEMY_DECK.y),
-  deck("library", LIBRARY_DECK.y),
-  deck("studio", STUDIO_DECK.y),
 ];
-
-export const BUILDINGS: Building[] = [
-  ...terracePlaques(),
-  ...academy(),
-  ...library(),
-  ...studio(),
-  ...yards(),
-  ...commons(),
-];
-
-/** Flat and low things are walked over, not into. */
-const WALKABLE: BuildingKind[] = ["court", "pool", "plaque", "monument"];
 
 export const BLOCKERS: Footprint[] = [
   ...BUILDINGS.filter((b) => !WALKABLE.includes(b.kind)).map((b) => ({
@@ -543,48 +506,53 @@ export const BLOCKERS: Footprint[] = [
 
 /* ------------------------------------------------------------------- pois */
 
-const jobIds = new Set(EXPERIENCE.map((j) => j.id));
-const bookIds = new Set(BOOKS.map((b) => b.id));
-const projectIds = new Set(PROJECTS.map((p) => p.id));
-const credentialIds = new Set(CREDENTIALS.map((c) => c.id));
-const showIds = new Set(SHOWS.map((s) => s.id));
+const ids = {
+  jobs: new Set(EXPERIENCE.map((e) => e.id)),
+  books: new Set(BOOKS.map((b) => b.id)),
+  volumes: new Set(VOLUMES.map((v) => v.id)),
+  projects: new Set(PROJECTS.map((p) => p.id)),
+  credentials: new Set(CREDENTIALS.map((c) => c.id)),
+  shows: new Set(SHOWS.map((s) => s.id)),
+};
 
 const HOBBY_LINES: Record<string, string> = {
   piano: "Still practising. The left hand is the honest one.",
   tennis: "Backhand down the line. It works maybe one time in four.",
   gym: "Where the deploy anxiety goes.",
+  bench: "Three sets, and then the rest of the day is easier.",
   surf: "Buenos Aires is not a surf town. That has never stopped anyone.",
+  mat: "Ten minutes that decide how the other fourteen hours go.",
 };
 
 function targetFor(id: string): PanelTarget {
-  if (jobIds.has(id)) return { kind: "experience", id };
-  if (bookIds.has(id)) return { kind: "book", id };
-  if (projectIds.has(id)) return { kind: "project", id };
-  if (showIds.has(id)) return { kind: "show", id };
-  if (credentialIds.has(id)) return { kind: "credentials" };
-  if (id === "microphone" || id === "reading-table") return { kind: "contact" };
+  if (ids.jobs.has(id)) return { kind: "experience", id };
+  if (ids.books.has(id)) return { kind: "book", id };
+  if (ids.volumes.has(id)) return { kind: "volume", id };
+  if (ids.projects.has(id)) return { kind: "project", id };
+  if (ids.shows.has(id)) return { kind: "show", id };
+  if (ids.credentials.has(id)) return { kind: "credentials" };
+  if (id === "shelf" || id === "armchair") return { kind: "contact" };
   return null;
 }
 
 export const ISO_POIS: IsoPoi[] = BUILDINGS.filter(
-  (b) => b.label && !b.id.startsWith("shelf-"),
+  (b) => b.label && !b.id.startsWith("plaque-") && !b.id.startsWith("bookcase-"),
 ).map((b): IsoPoi => {
   const hobby = HOBBY_LINES[b.id];
   return {
     id: b.id,
     x: b.x,
     y: b.y,
-    // Stand in front of it rather than inside its footprint.
     z: b.z + b.d / 2 + 1.5,
-    radius: Math.max(2.6, b.w * 0.5 + 1.6),
+    radius: Math.max(2.4, b.w * 0.5 + 1.5),
     label: b.label!,
     target: hobby ? null : targetFor(b.id),
     secret: hobby ? { id: b.id, line: hobby } : undefined,
   };
 });
 
-/** Where the player starts: the plaza, facing the terrace. */
-export const ISO_SPAWN = { x: 0, z: 6 };
+/** Where the player starts: the middle of the plaza. */
+export const ISO_SPAWN = { x: 0, z: 4 };
 
 export function nearestIsoPoi(x: number, z: number): IsoPoi | null {
   let best: IsoPoi | null = null;

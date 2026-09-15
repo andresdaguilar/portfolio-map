@@ -71,8 +71,8 @@ describe("the terrace", () => {
     walk(1, 1, 6);
     const atCorner = walker.y;
 
-    // Up-and-left turns the corner and carries on climbing.
-    walk(-1, 1, 6);
+    // The second leg runs the other way along the grid: down-and-right.
+    walk(1, -1, 6);
     expect(walker.y).toBeGreaterThan(atCorner);
     expect(walker.y).toBeCloseTo(LANDINGS[LANDINGS.length - 1].y, 1);
   });
@@ -83,7 +83,10 @@ describe("the terrace", () => {
     // Shove hard against every edge in turn.
     for (const [mx, my] of [[1, 1], [-1, -1], [1, -1], [-1, 1], [0, 1], [0, -1]]) {
       walk(mx, my, 2.5);
-      expect(walker.y).toBeGreaterThan(1);
+      expect({ push: `${mx},${my}`, y: walker.y > 1 }).toEqual({
+        push: `${mx},${my}`,
+        y: true,
+      });
       placeWalker(top.x, top.z, top.y);
     }
   });

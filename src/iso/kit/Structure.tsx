@@ -3,25 +3,32 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { DoubleSide, type Group } from "three";
+import { BOOKS } from "@/content";
 import { makeTextTexture } from "@/game/world/kit/textTexture";
 import { ISO_CAMERA } from "../core/constants";
 import { walker } from "../player/walker";
-import type { Building } from "../world/map";
+import { C, type Building } from "../world/map";
 
 /**
- * Everything in the town, from primitives.
+ * Everything that stands on the islands, built from primitives.
  *
- * Nothing is enclosed. In a fixed isometric view a walled building hides its
- * own contents and becomes a box you walk around, so the vocabulary here is
- * decks, colonnades, shelves and stones — things you can see into from across
- * the map.
+ * Nothing is enclosed. A walled building in a fixed isometric view hides its
+ * own contents and becomes a box you walk around, so a workplace is a desk on
+ * a step, a studio is a table and a microphone, a library is shelving you can
+ * see the spines of from across the water.
  */
 
-/** How close the walker must be for a place to name itself. */
-const LABEL_RANGE = 11;
+/**
+ * How close the walker must be for a place to name itself.
+ *
+ * Tied to the spacing of the things being named: the terrace landings sit 7
+ * apart, so anything much beyond that has three signs shouting at once and the
+ * map turns back into a labelled diagram.
+ */
+const LABEL_RANGE = 6.5;
 
-/** Text printed on a surface in the world, squared up to the fixed camera. */
-function Plate({
+/** Text on a surface, squared up to the camera, which never rotates. */
+function Printed({
   text,
   width,
   color = "#1b222b",
@@ -31,11 +38,7 @@ function Plate({
   color?: string;
 }) {
   const { texture, aspect } = useMemo(
-    () =>
-      makeTextTexture(text, {
-        color,
-        font: "600 56px ui-sans-serif, system-ui, sans-serif",
-      }),
+    () => makeTextTexture(text, { color, font: "600 56px ui-sans-serif, system-ui, sans-serif" }),
     [text, color],
   );
   useEffect(() => () => texture.dispose(), [texture]);
@@ -49,20 +52,22 @@ function Plate({
 }
 
 /**
- * A sign that appears only when the walker is close.
+ * A sign shown only when the walker is near.
  *
  * With every sign lit at once the map reads as a labelled diagram rather than
- * a place, and the boards collide with each other. Visibility is toggled on
- * the object rather than through React, so it costs nothing per frame.
+ * a place, and the boards collide. Visibility is toggled on the object rather
+ * than through React, so it costs nothing per frame.
  */
 function ProximityLabel({
-  text,
+  title,
+  sub,
   y,
   color,
   worldX,
   worldZ,
 }: {
-  text: string;
+  title: string;
+  sub?: string;
   y: number;
   color: string;
   worldX: number;
@@ -76,143 +81,365 @@ function ProximityLabel({
       Math.hypot(worldX - walker.x, worldZ - walker.z) < LABEL_RANGE;
   });
 
-  const { texture, aspect } = useMemo(
-    () =>
-      makeTextTexture(text, {
-        color: "#1b222b",
-        font: "600 56px ui-sans-serif, system-ui, sans-serif",
-      }),
-    [text],
+  const top = useMemo(
+    () => makeTextTexture(title, { color: "#1b222b", font: "600 56px ui-sans-serif, system-ui, sans-serif" }),
+    [title],
   );
-  useEffect(() => () => texture.dispose(), [texture]);
+  const bottom = useMemo(
+    () =>
+      sub
+        ? makeTextTexture(sub, { color: "#3c4652", font: "500 48px ui-sans-serif, system-ui, sans-serif" })
+        : null,
+    [sub],
+  );
 
-  const height = 0.8;
-  const width = height * aspect;
+  useEffect(() => {
+    return () => {
+      top.texture.dispose();
+      bottom?.texture.dispose();
+    };
+  }, [top, bottom]);
+
+  // Two lines rather than one. A company, a role and a span of years on a
+  // single strip makes a board wider than the building it names.
+  const titleHeight = 0.5;
+  const subHeight = 0.36;
+  const titleWidth = titleHeight * top.aspect;
+  const subWidth = bottom ? subHeight * bottom.aspect : 0;
+  const width = Math.max(titleWidth, subWidth) + 0.3;
+  const height = titleHeight + (bottom ? subHeight + 0.08 : 0) + 0.2;
 
   return (
     <group ref={group} position={[0, y, 0]} rotation={[0, ISO_CAMERA.azimuth, 0]}>
-      <mesh rotation={[-Math.PI / 6, 0, 0]}>
-        <planeGeometry args={[width + 0.3, height + 0.2]} />
-        <meshBasicMaterial color={color} side={DoubleSide} />
-      </mesh>
-      <mesh position={[0, 0, 0.01]} rotation={[-Math.PI / 6, 0, 0]}>
-        <planeGeometry args={[width, height]} />
-        <meshBasicMaterial map={texture} transparent side={DoubleSide} />
-      </mesh>
+      <group rotation={[-Math.PI / 7, 0, 0]}>
+        <mesh>
+          <planeGeometry args={[width, height]} />
+          <meshBasicMaterial color={color} side={DoubleSide} />
+        </mesh>
+        <mesh position={[0, bottom ? height / 2 - titleHeight / 2 - 0.1 : 0, 0.01]}>
+          <planeGeometry args={[titleWidth, titleHeight]} />
+          <meshBasicMaterial map={top.texture} transparent side={DoubleSide} />
+        </mesh>
+        {bottom && (
+          <mesh position={[0, -height / 2 + subHeight / 2 + 0.1, 0.01]}>
+            <planeGeometry args={[subWidth, subHeight]} />
+            <meshBasicMaterial map={bottom.texture} transparent side={DoubleSide} />
+          </mesh>
+        )}
+      </group>
     </group>
   );
 }
 
-function PitchedRoof({
-  w,
-  d,
-  h,
-  y,
-  color,
-}: {
-  w: number;
-  d: number;
-  h: number;
-  y: number;
-  color: string;
-}) {
+function Screen({ w, h, color }: { w: number; h: number; color: string }) {
   return (
-    <mesh position={[0, y + h / 2, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
-      <coneGeometry args={[Math.max(w, d) * 0.72, h, 4]} />
-      <meshStandardMaterial color={color} roughness={0.95} flatShading />
+    <mesh>
+      <planeGeometry args={[w, h]} />
+      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.55} />
     </mesh>
   );
 }
 
 export function Structure({ building }: { building: Building }) {
-  const { kind, x, y, z, w, d, h, color, roof, accent, label, sub } = building;
-  const warm = accent ?? "#e8e3d6";
+  const { kind, x, y, z, w, d, h, color, accent, label, sub, rotation = 0 } = building;
+  const warm = accent ?? C.accent;
+  // Most pieces square up to the camera, which never turns; a few are also
+  // rotated to follow the leg of the terrace they stand on.
+  const faceCamera: [number, number, number] = [0, ISO_CAMERA.azimuth + rotation, 0];
 
   const body = (() => {
     switch (kind) {
-      /**
-       * A career step. Low enough to see over from the landing behind it, so
-       * the whole terrace reads as one climb rather than a row of obstacles.
-       */
-      case "plaque":
+      /** A workplace: desk, monitor, chair. One per step of the career. */
+      case "desk": {
+        // The footprint is swapped for the rotated leg; the mesh is always
+        // built long-side-first and turned by the group above it.
+        const dw = rotation === 0 ? w : d;
+        const dd = rotation === 0 ? d : w;
         return (
-          <group rotation={[0, ISO_CAMERA.azimuth, 0]}>
-            <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
-              <boxGeometry args={[w, 0.24, d + 0.5]} />
+          <group rotation={faceCamera}>
+            <mesh position={[0, h * 0.55, 0]} castShadow receiveShadow>
+              <boxGeometry args={[dw, 0.12, dd]} />
               <meshStandardMaterial color={color} roughness={1} />
             </mesh>
-            <mesh position={[0, h / 2, 0]} castShadow>
-              <boxGeometry args={[w * 0.9, h, 0.22]} />
-              <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
-            {/* The face, tilted up towards the camera. */}
-            <group position={[0, h * 0.62, 0.14]} rotation={[-Math.PI / 9, 0, 0]}>
-              <mesh position={[0, 0, -0.01]}>
-                <planeGeometry args={[w * 0.82, h * 0.52]} />
-                <meshStandardMaterial color={warm} roughness={0.9} />
+            {[-dw / 2 + 0.15, dw / 2 - 0.15].map((lx) => (
+              <mesh key={lx} position={[lx, h * 0.28, 0]} castShadow>
+                <boxGeometry args={[0.12, h * 0.55, dd * 0.9]} />
+                <meshStandardMaterial color={C.timberDark} roughness={1} />
               </mesh>
-              <group position={[0, 0, 0.01]}>
-                <Plate text={label ?? ""} width={w * 0.7} />
+            ))}
+            {/* Monitor. */}
+            <mesh position={[0, h * 0.68, -dd * 0.2]} castShadow>
+              <boxGeometry args={[0.1, 0.28, 0.1]} />
+              <meshStandardMaterial color={C.ink} roughness={0.8} />
+            </mesh>
+            <group position={[0, h * 0.98, -dd * 0.2]}>
+              <mesh castShadow>
+                <boxGeometry args={[1.5, 0.85, 0.08]} />
+                <meshStandardMaterial color={C.ink} roughness={0.7} />
+              </mesh>
+              <group position={[0, 0, 0.05]}>
+                <Screen w={1.35} h={0.72} color={warm} />
               </group>
             </group>
-          </group>
-        );
-
-      /** An open colonnade: columns and a roof, no walls. */
-      case "columns": {
-        const columns = 6;
-        return (
-          <group>
-            <mesh position={[0, 0.12, 0]} receiveShadow>
-              <boxGeometry args={[w + 1.6, 0.24, d + 1.6]} />
-              <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
-            {Array.from({ length: columns }, (_, i) => {
-              const t = i / (columns - 1);
-              return [-d / 2, d / 2].map((cz, j) => (
-                <mesh
-                  key={`${i}-${j}`}
-                  position={[-w / 2 + t * w, h * 0.45, cz]}
-                  castShadow
-                >
-                  <cylinderGeometry args={[0.24, 0.28, h * 0.9, 9]} />
-                  <meshStandardMaterial color={color} roughness={1} />
-                </mesh>
-              ));
-            })}
-            <mesh position={[0, h * 0.95, 0]} castShadow>
-              <boxGeometry args={[w + 1.2, h * 0.2, d + 1.2]} />
-              <meshStandardMaterial color={roof ?? color} roughness={1} />
-            </mesh>
-            <PitchedRoof w={w + 1} d={d + 1} h={h * 0.4} y={h * 1.05} color={roof ?? color} />
+            {/* Chair. */}
+            <group position={[0, 0, dd * 0.95]}>
+              <mesh position={[0, h * 0.42, 0]} castShadow>
+                <boxGeometry args={[0.85, 0.12, 0.8]} />
+                <meshStandardMaterial color={C.ink} roughness={1} />
+              </mesh>
+              <mesh position={[0, h * 0.75, 0.35]} castShadow>
+                <boxGeometry args={[0.85, 0.7, 0.12]} />
+                <meshStandardMaterial color={C.ink} roughness={1} />
+              </mesh>
+              <mesh position={[0, h * 0.2, 0]} castShadow>
+                <cylinderGeometry args={[0.07, 0.07, h * 0.45, 8]} />
+                <meshStandardMaterial color={C.slate} roughness={0.7} />
+              </mesh>
+            </group>
           </group>
         );
       }
 
-      /** Open shelving: a frame with rows of spines, visible from across the map. */
-      case "shelf":
+      /** The company's name, cut into the step. */
+      case "plaque": {
+        const pw = rotation === 0 ? w : d;
+        const pd = rotation === 0 ? d : w;
         return (
-          <group>
-            <mesh position={[0, h / 2, -d / 2]} castShadow receiveShadow>
-              <boxGeometry args={[w, h, 0.25]} />
+          <group rotation={faceCamera}>
+            <mesh position={[0, h * 0.5, 0]} castShadow receiveShadow>
+              <boxGeometry args={[pw, h, pd]} />
               <meshStandardMaterial color={color} roughness={1} />
             </mesh>
-            {[0.55, 1.35, 2.15].map((shelfY) => (
+            <group position={[0, h * 0.62, pd / 2 + 0.01]} rotation={[-Math.PI / 12, 0, 0]}>
+              <mesh position={[0, 0, -0.01]}>
+                <planeGeometry args={[pw * 0.88, h * 0.5]} />
+                <meshStandardMaterial color={warm} roughness={0.9} />
+              </mesh>
+              <group position={[0, 0, 0.01]}>
+                <Printed text={label ?? ""} width={pw * 0.76} />
+              </group>
+            </group>
+          </group>
+        );
+      }
+
+      /** A colonnade under a dome, with the degree across the front. */
+      case "university":
+        return (
+          <group>
+            <mesh position={[0, 0.25, 0]} receiveShadow castShadow>
+              <boxGeometry args={[w + 3, 0.5, d + 3]} />
+              <meshStandardMaterial color={C.stone} roughness={1} />
+            </mesh>
+            <mesh position={[0, h * 0.42, -d * 0.15]} castShadow receiveShadow>
+              <boxGeometry args={[w * 0.8, h * 0.7, d * 0.8]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            {/* Columns across the front. */}
+            {Array.from({ length: 7 }, (_, i) => (
+              <mesh
+                key={i}
+                position={[-w / 2 + 1.2 + i * ((w - 2.4) / 6), h * 0.38, d / 2 - 0.4]}
+                castShadow
+              >
+                <cylinderGeometry args={[0.32, 0.36, h * 0.72, 10]} />
+                <meshStandardMaterial color={C.marble} roughness={1} />
+              </mesh>
+            ))}
+            {/* Pediment carrying the degree. */}
+            <mesh position={[0, h * 0.82, d / 2 - 0.4]} castShadow>
+              <boxGeometry args={[w, h * 0.22, 1.4]} />
+              <meshStandardMaterial color={C.marble} roughness={1} />
+            </mesh>
+            <group position={[0, h * 0.82, d / 2 + 0.32]}>
+              <Printed text={label ?? ""} width={w * 0.82} />
+            </group>
+            {/* Dome. */}
+            <mesh position={[0, h * 0.95, -d * 0.15]} castShadow>
+              <cylinderGeometry args={[w * 0.18, w * 0.2, h * 0.18, 16]} />
+              <meshStandardMaterial color={C.marble} roughness={1} />
+            </mesh>
+            <mesh position={[0, h * 1.04, -d * 0.15]} castShadow>
+              <sphereGeometry args={[w * 0.18, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+              <meshStandardMaterial color={C.slate} roughness={0.8} flatShading />
+            </mesh>
+          </group>
+        );
+
+      case "fountain":
+        return (
+          <group>
+            <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+              <cylinderGeometry args={[w / 2, w / 2 + 0.2, 0.6, 24]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            <mesh position={[0, 0.62, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[w / 2 - 0.3, 24]} />
+              <meshStandardMaterial color={warm} roughness={0.2} metalness={0.2} />
+            </mesh>
+            <mesh position={[0, 1.1, 0]} castShadow>
+              <cylinderGeometry args={[0.18, 0.26, 1, 10]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            <mesh position={[0, 1.7, 0]} castShadow>
+              <sphereGeometry args={[0.45, 16, 12]} />
+              <meshStandardMaterial color={warm} roughness={0.25} metalness={0.2} />
+            </mesh>
+          </group>
+        );
+
+      /** A round table with microphones: the studio, with no walls. */
+      case "roundtable":
+        return (
+          <group>
+            <mesh position={[0, h, 0]} castShadow receiveShadow>
+              <cylinderGeometry args={[w / 2, w / 2, 0.14, 28]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            <mesh position={[0, h / 2, 0]} castShadow>
+              <cylinderGeometry args={[0.22, 0.5, h, 12]} />
+              <meshStandardMaterial color={C.timberDark} roughness={1} />
+            </mesh>
+            {[0, 1, 2, 3].map((i) => {
+              const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+              const mx = Math.sin(angle) * (w / 2 - 0.7);
+              const mz = Math.cos(angle) * (w / 2 - 0.7);
+              return (
+                <group key={i}>
+                  {/* Microphone on a short boom. */}
+                  <mesh position={[mx, h + 0.35, mz]} castShadow>
+                    <cylinderGeometry args={[0.04, 0.04, 0.7, 6]} />
+                    <meshStandardMaterial color={C.ink} roughness={0.6} metalness={0.3} />
+                  </mesh>
+                  <mesh position={[mx, h + 0.75, mz]} castShadow>
+                    <capsuleGeometry args={[0.11, 0.18, 4, 10]} />
+                    <meshStandardMaterial color={accent ?? C.ink} roughness={0.5} />
+                  </mesh>
+                  {/* Chair. */}
+                  <group position={[Math.sin(angle) * (w / 2 + 1), 0, Math.cos(angle) * (w / 2 + 1)]}>
+                    <mesh position={[0, 0.5, 0]} castShadow>
+                      <boxGeometry args={[0.8, 0.12, 0.8]} />
+                      <meshStandardMaterial color={C.ink} roughness={1} />
+                    </mesh>
+                    <mesh position={[0, 0.3, 0]} castShadow>
+                      <cylinderGeometry args={[0.07, 0.07, 0.5, 8]} />
+                      <meshStandardMaterial color={C.slate} roughness={0.7} />
+                    </mesh>
+                  </group>
+                </group>
+              );
+            })}
+          </group>
+        );
+
+      /** Acoustic panelling and the on-air lamp. The studio's back wall. */
+      case "acoustic":
+        return (
+          <group rotation={faceCamera}>
+            <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w, h, d]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            {Array.from({ length: 14 }, (_, i) => (
+              <mesh
+                key={i}
+                position={[-w / 2 + 0.7 + i * ((w - 1.4) / 13), h * 0.55, d / 2 + 0.06]}
+                castShadow
+              >
+                <boxGeometry args={[0.55, h * 0.72, 0.12]} />
+                <meshStandardMaterial
+                  color={i % 2 ? C.timber : C.timberDark}
+                  roughness={1}
+                />
+              </mesh>
+            ))}
+            <group position={[0, h * 1.05, d / 2 + 0.1]}>
+              <mesh>
+                <planeGeometry args={[3.2, 0.9]} />
+                <meshStandardMaterial color="#c0392b" emissive="#c0392b" emissiveIntensity={0.8} />
+              </mesh>
+              <group position={[0, 0, 0.02]}>
+                <Printed text="ON AIR" width={2.4} color="#ffffff" />
+              </group>
+            </group>
+            <pointLight color="#e06a55" intensity={20} distance={16} decay={2} position={[0, h, 2]} />
+          </group>
+        );
+
+      /** The mixing desk. */
+      case "console":
+        return (
+          <group rotation={faceCamera}>
+            <mesh position={[0, h * 0.4, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w, h * 0.8, d]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            <mesh position={[0, h * 0.84, 0]} rotation={[-Math.PI / 7, 0, 0]} castShadow>
+              <boxGeometry args={[w * 0.95, 0.1, d * 0.9]} />
+              <meshStandardMaterial color={C.ink} roughness={0.8} />
+            </mesh>
+            {Array.from({ length: 8 }, (_, i) => (
+              <mesh
+                key={i}
+                position={[-w / 2 + 0.4 + i * ((w - 0.8) / 7), h * 0.92, 0]}
+                rotation={[-Math.PI / 7, 0, 0]}
+              >
+                <boxGeometry args={[0.1, 0.05, 0.4]} />
+                <meshStandardMaterial color={warm} emissive={warm} emissiveIntensity={0.6} />
+              </mesh>
+            ))}
+          </group>
+        );
+
+      /** One show: a coloured marker readable from across the water. */
+      case "totem":
+        return (
+          <group rotation={faceCamera}>
+            <mesh position={[0, 0.1, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w + 0.4, 0.2, d + 0.4]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            <mesh position={[0, h / 2, 0]} castShadow>
+              <boxGeometry args={[w, h, d]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            <mesh position={[0, h * 0.68, d / 2 + 0.01]}>
+              <planeGeometry args={[w * 0.82, h * 0.5]} />
+              <meshStandardMaterial color={warm} emissive={warm} emissiveIntensity={0.5} />
+            </mesh>
+          </group>
+        );
+
+      /** Open shelving, spines out. */
+      case "bookcase":
+        return (
+          <group rotation={faceCamera}>
+            <mesh position={[0, h / 2, -d / 2]} castShadow receiveShadow>
+              <boxGeometry args={[w, h, 0.2]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            {[0.5, 1.4, 2.3, 3.2].map((shelfY) => (
               <group key={shelfY}>
                 <mesh position={[0, shelfY, 0]} castShadow>
-                  <boxGeometry args={[w, 0.12, d]} />
+                  <boxGeometry args={[w, 0.1, d]} />
                   <meshStandardMaterial color={color} roughness={1} />
                 </mesh>
-                {Array.from({ length: 11 }, (_, i) => {
-                  const tone = ["#a8503f", "#4f6f84", "#7e8a52", "#8b6a45", "#6a5472"][i % 5];
-                  const bookHeight = 0.42 + ((i * 7) % 5) * 0.05;
+                {Array.from({ length: 14 }, (_, i) => {
+                  const tone = ["#a8503f", "#4f6f84", "#7e8a52", "#8b6a45", "#6a5472", "#a67c3f"][
+                    (i * 3 + Math.round(shelfY * 10)) % 6
+                  ];
+                  const bookHeight = 0.5 + ((i * 7) % 4) * 0.06;
                   return (
                     <mesh
                       key={i}
-                      position={[-w / 2 + 0.35 + i * (w - 0.7) / 10, shelfY + 0.06 + bookHeight / 2, 0]}
+                      position={[
+                        -w / 2 + 0.3 + i * ((w - 0.6) / 13),
+                        shelfY + 0.05 + bookHeight / 2,
+                        0,
+                      ]}
                       castShadow
                     >
-                      <boxGeometry args={[0.2, bookHeight, d * 0.7]} />
+                      <boxGeometry args={[0.18, bookHeight, d * 0.75]} />
                       <meshStandardMaterial color={tone} roughness={1} />
                     </mesh>
                   );
@@ -222,177 +449,238 @@ export function Structure({ building }: { building: Building }) {
           </group>
         );
 
-      case "table":
+      /** The written work, face out, on a display table. */
+      case "book-display":
         return (
-          <group>
-            <mesh position={[0, h, 0]} castShadow receiveShadow>
+          <group rotation={faceCamera}>
+            <mesh position={[0, h * 0.85, 0]} castShadow receiveShadow>
               <boxGeometry args={[w, 0.14, d]} />
               <meshStandardMaterial color={color} roughness={1} />
             </mesh>
-            {[
-              [-w / 2 + 0.25, -d / 2 + 0.25],
-              [w / 2 - 0.25, -d / 2 + 0.25],
-              [-w / 2 + 0.25, d / 2 - 0.25],
-              [w / 2 - 0.25, d / 2 - 0.25],
-            ].map(([lx, lz], i) => (
-              <mesh key={i} position={[lx, h / 2, lz]} castShadow>
-                <boxGeometry args={[0.14, h, 0.14]} />
+            {[-w / 2 + 0.3, w / 2 - 0.3].map((lx) => (
+              <mesh key={lx} position={[lx, h * 0.42, 0]} castShadow>
+                <boxGeometry args={[0.16, h * 0.85, d * 0.8]} />
+                <meshStandardMaterial color={C.timberDark} roughness={1} />
+              </mesh>
+            ))}
+            {BOOKS.map((book, i) => (
+              <group
+                key={book.id}
+                position={[-w / 2 + 1 + i * ((w - 2) / (BOOKS.length - 1)), h * 1.28, 0]}
+                rotation={[-0.16, 0, 0]}
+              >
+                <mesh castShadow>
+                  <boxGeometry args={[1.1, 1.5, 0.12]} />
+                  <meshStandardMaterial color={book.color} roughness={0.85} />
+                </mesh>
+                <mesh position={[0, 0, 0.07]}>
+                  <planeGeometry args={[0.92, 1.3]} />
+                  <meshStandardMaterial color="#ffffff" transparent opacity={0.14} />
+                </mesh>
+              </group>
+            ))}
+          </group>
+        );
+
+      case "armchair":
+        return (
+          <group rotation={faceCamera}>
+            <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w, 0.45, d]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            <mesh position={[0, 0.95, -d / 2 + 0.2]} castShadow>
+              <boxGeometry args={[w, 1.1, 0.35]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            {[-w / 2 + 0.18, w / 2 - 0.18].map((lx) => (
+              <mesh key={lx} position={[lx, 0.8, 0]} castShadow>
+                <boxGeometry args={[0.32, 0.5, d * 0.9]} />
                 <meshStandardMaterial color={color} roughness={1} />
               </mesh>
             ))}
-            {/* An open book, left on the table. */}
-            <mesh position={[0, h + 0.1, 0]} rotation={[-Math.PI / 2, 0, 0.2]}>
-              <planeGeometry args={[1.1, 0.8]} />
-              <meshStandardMaterial color="#efe8d8" roughness={1} side={DoubleSide} />
-            </mesh>
           </group>
         );
 
-      /** The open-air studio: a stand, a mic, and an on-air lamp. */
-      case "mic":
+      /** A project, as a lit board you can read from the bridge. */
+      case "billboard":
         return (
-          <group>
-            <mesh position={[0, 0.06, 0]} castShadow receiveShadow>
-              <cylinderGeometry args={[0.7, 0.8, 0.12, 20]} />
+          <group rotation={faceCamera}>
+            {[-w / 2 + 0.3, w / 2 - 0.3].map((lx) => (
+              <mesh key={lx} position={[lx, h * 0.3, 0]} castShadow>
+                <boxGeometry args={[0.16, h * 0.6, 0.16]} />
+                <meshStandardMaterial color={C.slate} roughness={0.9} />
+              </mesh>
+            ))}
+            <mesh position={[0, h * 0.72, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w, h * 0.56, d]} />
               <meshStandardMaterial color={color} roughness={1} />
             </mesh>
-            <mesh position={[0, h * 0.45, 0]} castShadow>
-              <cylinderGeometry args={[0.07, 0.07, h * 0.9, 8]} />
-              <meshStandardMaterial color={color} roughness={0.7} metalness={0.3} />
-            </mesh>
-            <mesh position={[0, h * 0.95, 0.12]} rotation={[0.35, 0, 0]} castShadow>
-              <capsuleGeometry args={[0.17, 0.3, 4, 12]} />
-              <meshStandardMaterial color="#2c3440" roughness={0.6} />
-            </mesh>
-            <mesh position={[0, h * 1.25, 0]} rotation={[0, ISO_CAMERA.azimuth, 0]}>
-              <planeGeometry args={[1.5, 0.42]} />
-              <meshStandardMaterial
-                color={warm}
-                emissive={warm}
-                emissiveIntensity={0.7}
-                side={DoubleSide}
-              />
-            </mesh>
-            <pointLight color={warm} intensity={12} distance={12} decay={2} position={[0, h * 1.3, 0]} />
+            <group position={[0, h * 0.78, d / 2 + 0.02]}>
+              <Screen w={w * 0.82} h={h * 0.3} color={warm} />
+            </group>
+            <group position={[0, h * 0.54, d / 2 + 0.02]}>
+              <mesh position={[0, 0, -0.01]}>
+                <planeGeometry args={[w * 0.86, 0.5]} />
+                <meshStandardMaterial color={C.marble} roughness={1} />
+              </mesh>
+              <group position={[0, 0, 0.01]}>
+                <Printed text={label ?? ""} width={w * 0.76} />
+              </group>
+            </group>
           </group>
         );
 
-      /** One show: a coloured marker you can read the colour of from far off. */
-      case "totem":
+      case "surfboard":
         return (
-          <group rotation={[0, ISO_CAMERA.azimuth, 0]}>
-            <mesh position={[0, 0.1, 0]} castShadow receiveShadow>
-              <boxGeometry args={[w + 0.5, 0.2, d + 0.5]} />
-              <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
+          <group rotation={[0, ISO_CAMERA.azimuth, 0.22]}>
             <mesh position={[0, h / 2, 0]} castShadow>
-              <boxGeometry args={[w, h, d]} />
-              <meshStandardMaterial color={color} roughness={1} />
+              <capsuleGeometry args={[0.42, h - 0.84, 6, 14]} />
+              <meshStandardMaterial color={color} roughness={0.55} />
             </mesh>
-            <mesh position={[0, h * 0.72, d / 2 + 0.01]}>
-              <planeGeometry args={[w * 0.82, h * 0.44]} />
-              <meshStandardMaterial
-                color={warm}
-                emissive={warm}
-                emissiveIntensity={0.45}
-              />
+            <mesh position={[0, h / 2, 0.06]} scale={[1, 1, 0.2]}>
+              <capsuleGeometry args={[0.13, h - 1.1, 4, 10]} />
+              <meshStandardMaterial color={warm} roughness={0.5} />
             </mesh>
           </group>
         );
 
-      case "monument":
+      case "weights":
         return (
-          <group>
-            <mesh position={[0, 0.14, 0]} castShadow receiveShadow>
-              <boxGeometry args={[w * 1.6, 0.28, d * 1.6]} />
+          <group rotation={faceCamera}>
+            <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w, 0.24, d]} />
               <meshStandardMaterial color={color} roughness={1} />
             </mesh>
-            <mesh position={[0, 0.28 + h / 2, 0]} castShadow>
-              <boxGeometry args={[w, h, d]} />
-              <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
-            <mesh position={[0, 0.28 + h + 0.28, 0]}>
-              <octahedronGeometry args={[0.32]} />
-              <meshStandardMaterial
-                color={warm}
-                emissive={warm}
-                emissiveIntensity={0.6}
-                roughness={0.5}
-              />
-            </mesh>
+            {[0.55, 1.1].map((shelfY) => (
+              <group key={shelfY}>
+                <mesh position={[0, shelfY, 0]} castShadow>
+                  <boxGeometry args={[w, 0.12, d * 0.8]} />
+                  <meshStandardMaterial color={color} roughness={1} />
+                </mesh>
+                {[-0.7, 0, 0.7].map((dx) => (
+                  <group key={dx} position={[dx, shelfY + 0.28, 0]}>
+                    <mesh castShadow>
+                      <cylinderGeometry args={[0.05, 0.05, 0.6, 8]} />
+                      <meshStandardMaterial color={C.slate} metalness={0.4} roughness={0.5} />
+                    </mesh>
+                    {[-0.24, 0.24].map((side) => (
+                      <mesh key={side} position={[0, 0, side]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                        <cylinderGeometry args={[0.22, 0.22, 0.12, 14]} />
+                        <meshStandardMaterial color={C.ink} roughness={0.9} />
+                      </mesh>
+                    ))}
+                  </group>
+                ))}
+              </group>
+            ))}
           </group>
         );
 
-      case "stall":
+      case "bench":
         return (
-          <group>
-            <mesh position={[0, h * 0.45, -d * 0.12]} castShadow receiveShadow>
-              <boxGeometry args={[w * 0.85, h * 0.9, d * 0.7]} />
+          <group rotation={faceCamera}>
+            <mesh position={[0, h, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w, 0.2, d]} />
               <meshStandardMaterial color={color} roughness={1} />
             </mesh>
-            <PitchedRoof w={w} d={d * 0.9} h={h * 0.5} y={h * 0.9} color={roof ?? color} />
-            <mesh position={[0, h * 0.34, d * 0.34]} castShadow receiveShadow>
-              <boxGeometry args={[w * 0.9, h * 0.06, 0.35]} />
-              <meshStandardMaterial color={roof} roughness={1} />
-            </mesh>
-            <mesh position={[0, h * 0.55, -d * 0.12 + d * 0.35 + 0.02]}>
-              <planeGeometry args={[w * 0.45, h * 0.3]} />
-              <meshStandardMaterial color={warm} emissive={warm} emissiveIntensity={0.35} />
-            </mesh>
-          </group>
-        );
-
-      case "pavilion":
-        return (
-          <group>
-            {[
-              [-w / 2 + 0.3, -d / 2 + 0.3],
-              [w / 2 - 0.3, -d / 2 + 0.3],
-              [-w / 2 + 0.3, d / 2 - 0.3],
-              [w / 2 - 0.3, d / 2 - 0.3],
-            ].map(([cx, cz], i) => (
-              <mesh key={i} position={[cx, h * 0.4, cz]} castShadow>
-                <cylinderGeometry args={[0.16, 0.16, h * 0.8, 6]} />
-                <meshStandardMaterial color={color} roughness={1} />
+            {[-w / 2 + 0.2, w / 2 - 0.2].map((lx) => (
+              <mesh key={lx} position={[lx, h / 2, 0]} castShadow>
+                <boxGeometry args={[0.14, h, 0.14]} />
+                <meshStandardMaterial color={C.slate} roughness={0.8} />
               </mesh>
             ))}
-            <mesh position={[0, 0.08, 0]} receiveShadow>
-              <boxGeometry args={[w, 0.16, d]} />
-              <meshStandardMaterial color={color} roughness={1} />
-            </mesh>
-            <PitchedRoof w={w} d={d} h={h * 0.5} y={h * 0.8} color={roof ?? color} />
           </group>
         );
 
-      case "court":
-      case "pool":
+      case "piano":
+        return (
+          <group rotation={faceCamera}>
+            <mesh position={[0, h * 0.75, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w, 0.3, d]} />
+              <meshStandardMaterial color={color} roughness={0.5} />
+            </mesh>
+            {/* Keys. */}
+            <mesh position={[0, h * 0.92, d / 2 - 0.15]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[w * 0.92, 0.45]} />
+              <meshStandardMaterial color={warm} roughness={0.7} />
+            </mesh>
+            {Array.from({ length: 13 }, (_, i) => (
+              <mesh
+                key={i}
+                position={[-w * 0.44 + i * ((w * 0.88) / 12), h * 0.94, d / 2 - 0.22]}
+                rotation={[-Math.PI / 2, 0, 0]}
+              >
+                <planeGeometry args={[0.07, 0.26]} />
+                <meshBasicMaterial color={color} />
+              </mesh>
+            ))}
+            {[-w / 2 + 0.2, w / 2 - 0.2].map((lx) => (
+              <mesh key={lx} position={[lx, h * 0.37, 0]} castShadow>
+                <boxGeometry args={[0.14, h * 0.75, 0.14]} />
+                <meshStandardMaterial color={color} roughness={0.6} />
+              </mesh>
+            ))}
+            {/* Stool. */}
+            <group position={[0, 0, d / 2 + 0.9]}>
+              <mesh position={[0, 0.55, 0]} castShadow>
+                <boxGeometry args={[1, 0.14, 0.6]} />
+                <meshStandardMaterial color={C.timberDark} roughness={1} />
+              </mesh>
+            </group>
+          </group>
+        );
+
+      case "rackets":
+        return (
+          <group rotation={faceCamera}>
+            <mesh position={[0, 0.1, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w, 0.2, d]} />
+              <meshStandardMaterial color={color} roughness={1} />
+            </mesh>
+            {[-0.35, 0.35].map((dx, i) => (
+              <group key={dx} position={[dx, h * 0.6, 0]} rotation={[0, 0, i ? 0.22 : -0.22]}>
+                <mesh castShadow>
+                  <cylinderGeometry args={[0.05, 0.05, h * 0.5, 6]} />
+                  <meshStandardMaterial color={C.ink} roughness={0.9} />
+                </mesh>
+                <mesh position={[0, h * 0.42, 0]} castShadow>
+                  <torusGeometry args={[0.3, 0.05, 8, 18]} />
+                  <meshStandardMaterial color={C.ink} roughness={0.9} />
+                </mesh>
+              </group>
+            ))}
+            <mesh position={[0, 0.32, d / 2 + 0.2]} castShadow>
+              <sphereGeometry args={[0.18, 12, 10]} />
+              <meshStandardMaterial color={warm} roughness={0.95} />
+            </mesh>
+          </group>
+        );
+
+      case "mat":
       default:
         return (
-          <group>
-            <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-              <planeGeometry args={[w, d]} />
-              <meshStandardMaterial color={color} roughness={0.8} />
-            </mesh>
-            <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[w * 0.9, 0.12]} />
-              <meshBasicMaterial color={warm} />
+          <group rotation={faceCamera}>
+            <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w, 0.1, d]} />
+              <meshStandardMaterial color={color} roughness={1} />
             </mesh>
           </group>
         );
     }
   })();
 
-  // Plaques already carry their name in the world, so their floating sign
-  // shows the role and the years instead.
-  const signText = kind === "plaque" ? (sub ?? label) : (sub ? `${label} · ${sub}` : label);
-  const signY = kind === "plaque" ? h + 1.1 : h + Math.max(1.2, h * 0.4);
+  // Plaques carry their name in the world, so nothing floats over them.
+  const showSign = kind !== "plaque" && Boolean(label);
+  const signY = h + Math.max(1.1, h * 0.35);
 
   return (
     <group position={[x, y, z]}>
       {body}
-      {signText && (
+      {showSign && (
         <ProximityLabel
-          text={signText}
+          title={label!}
+          sub={sub}
           y={signY}
           color={warm}
           worldX={x}

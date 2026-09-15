@@ -97,15 +97,27 @@ export interface PodcastShow {
 
 export type AmazonMarketplace = "us" | "uk" | "es" | "de" | "mx" | "br";
 
+/** A book on the library shelf. */
 export interface Book {
   id: string;
   title: string;
-  /** Matches a `PodcastShow.id` — the books are collected episodes. */
+  subtitle?: string;
+  /** Spine colour — how one book is told from another at map distance. */
+  color: string;
+  status: "published" | "in-progress";
+  /** Present once it is on sale. */
+  asin?: string;
+}
+
+/** A collected volume of podcast episodes, shown at the studio. */
+export interface Volume {
+  id: string;
+  title: string;
+  /** Matches a `PodcastShow.id`. */
   show: string;
   volume: number;
   /** Cover art under `/public/books/`. */
   cover: string;
-  /** Absent while a volume is still unpublished. */
   asin?: string;
 }
 

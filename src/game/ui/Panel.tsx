@@ -10,6 +10,7 @@ import {
   PROFILE,
   PROJECTS,
   SHOWS,
+  VOLUMES,
   formatRange,
   kindleLink,
 } from "@/content";
@@ -79,6 +80,7 @@ export function Panel() {
         {panel.kind === "experience" && <ExperiencePanel id={panel.id} />}
         {panel.kind === "project" && <ProjectPanel id={panel.id} />}
         {panel.kind === "book" && <BookPanel id={panel.id} />}
+        {panel.kind === "volume" && <VolumePanel id={panel.id} />}
         {panel.kind === "show" && <ShowPanel id={panel.id} />}
         {panel.kind === "credentials" && <CredentialsPanel />}
         {panel.kind === "contact" && <ContactPanel />}
@@ -176,29 +178,66 @@ function ProjectPanel({ id }: { id: string }) {
 function BookPanel({ id }: { id: string }) {
   const book = BOOKS.find((b) => b.id === id);
   if (!book) return null;
-  const show = SHOWS.find((s) => s.id === book.show);
 
   return (
     <article>
-      <Heading title={book.title} sub={show?.nativeName} />
+      <Heading title={book.title} sub={book.subtitle} />
+      <p className="mt-4 text-sm">
+        <span
+          className="inline-block h-3 w-3 rounded-sm align-middle"
+          style={{ background: book.color }}
+          aria-hidden
+        />
+        <span className="ml-2 align-middle text-muted">
+          {book.status === "published" ? "Published" : "In progress"}
+        </span>
+      </p>
+      {book.asin && (
+        <p className="mt-4 font-mono text-sm">
+          <span className="text-muted">Kindle: </span>
+          {MARKETPLACES.map((market) => (
+            <a
+              key={market}
+              href={kindleLink(book.asin!, market)}
+              target="_blank"
+              rel="noreferrer"
+              className="mr-2 text-muted hover:text-accent"
+            >
+              {market.toUpperCase()}
+            </a>
+          ))}
+        </p>
+      )}
+    </article>
+  );
+}
+
+function VolumePanel({ id }: { id: string }) {
+  const volume = VOLUMES.find((v) => v.id === id);
+  if (!volume) return null;
+  const show = SHOWS.find((s) => s.id === volume.show);
+
+  return (
+    <article>
+      <Heading title={volume.title} sub={show?.nativeName} />
       <div className="mt-5 flex flex-wrap items-start gap-5">
         {/* eslint-disable-next-line @next/next/no-img-element -- a static
             cover in a modal; the image component's layout machinery buys
             nothing here. */}
         <img
-          src={book.cover}
-          alt={`Cover of ${book.title}`}
+          src={volume.cover}
+          alt={`Cover of ${volume.title}`}
           className="w-32 rounded border border-edge"
         />
         <div className="flex-1">
           {show && <p className="leading-relaxed text-text/90">{show.summary}</p>}
-          {book.asin ? (
+          {volume.asin ? (
             <p className="mt-4 font-mono text-sm">
               <span className="text-muted">Kindle: </span>
               {MARKETPLACES.map((market) => (
                 <a
                   key={market}
-                  href={kindleLink(book.asin!, market)}
+                  href={kindleLink(volume.asin!, market)}
                   target="_blank"
                   rel="noreferrer"
                   className="mr-2 text-muted hover:text-accent"
