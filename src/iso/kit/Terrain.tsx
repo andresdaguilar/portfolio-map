@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { overlapsCircle } from "../core/nav";
-import { BLOCKERS, DISTRICTS } from "../world/map";
+import { BLOCKERS, DISTRICTS, LANDINGS, PLATFORMS, RAILINGS } from "../world/map";
 
 /**
  * The ground the town sits on.
@@ -13,6 +13,8 @@ import { BLOCKERS, DISTRICTS } from "../world/map";
  * where they are meant to go next.
  */
 
+const STONE = "#c2b79f";
+const STONE_EDGE = "#a89a80";
 const GRASS = "#7d9560";
 const GRASS_DARK = "#6d8554";
 const SAND = "#cbb894";
@@ -98,6 +100,14 @@ export function Terrain() {
       if (BLOCKERS.some((b) => overlapsCircle(b, x, z, 3.5))) continue;
       if (Math.hypot(x, z) < 12) continue;
       if (
+        PLATFORMS.some(
+          (p) =>
+            x > p.x - 2 && x < p.x + p.w + 2 && z > p.z - 2 && z < p.z + p.d + 2,
+        )
+      ) {
+        continue;
+      }
+      if (
         DISTRICTS.some(
           (d) => Math.abs(x - d.x) < d.w + 2 && Math.abs(z - d.z) < d.d + 2,
         )
@@ -176,6 +186,56 @@ export function Terrain() {
           opacity={0.22}
         />
       ))}
+
+      {/* Raised ground: the career terrace and the open decks. Each slab is
+          drawn down to the ground rather than floating, so the steps read as
+          cut stone and the risers catch the light. */}
+      {PLATFORMS.map((platform) => (
+        <group key={platform.id}>
+          <mesh
+            position={[
+              platform.x + platform.w / 2,
+              platform.y / 2,
+              platform.z + platform.d / 2,
+            ]}
+            castShadow
+            receiveShadow
+          >
+            <boxGeometry args={[platform.w, Math.max(platform.y, 0.12), platform.d]} />
+            <meshStandardMaterial color={STONE_EDGE} roughness={1} />
+          </mesh>
+          <mesh
+            position={[
+              platform.x + platform.w / 2,
+              platform.y + 0.01,
+              platform.z + platform.d / 2,
+            ]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            receiveShadow
+          >
+            <planeGeometry args={[platform.w - 0.25, platform.d - 0.25]} />
+            <meshStandardMaterial color={STONE} roughness={1} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* The parapets that keep you on the terrace. Low enough to see over
+          from the landing above, which is the whole point of a terrace. */}
+      {RAILINGS.map((rail) => {
+        const landing = LANDINGS.find((l) => rail.id?.includes(l.id));
+        const y = landing?.y ?? 0;
+        return (
+          <mesh
+            key={rail.id}
+            position={[rail.x + rail.w / 2, y + 0.3, rail.z + rail.d / 2]}
+            castShadow
+            receiveShadow
+          >
+            <boxGeometry args={[rail.w, 0.6, rail.d]} />
+            <meshStandardMaterial color={STONE_EDGE} roughness={1} />
+          </mesh>
+        );
+      })}
 
       {trees.map((tree, i) => (
         <Tree key={i} {...tree} />

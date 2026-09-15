@@ -27,6 +27,19 @@ export const ISO_CAMERA = {
    * has to stay clear.
    */
   viewWidth: 28,
+  /**
+   * Zoom limits, expressed as how much world is visible across.
+   *
+   * Bounded in both directions on purpose: past the near limit the primitives
+   * stop holding up close, and past the far one the walker is a few pixels and
+   * the labels are unreadable.
+   */
+  minViewWidth: 14,
+  maxViewWidth: 68,
+  /** Multiplier applied per wheel notch. */
+  zoomStep: 1.12,
+  /** How quickly the view eases to a new zoom level. */
+  zoomEase: 9,
   /** How far the player can roam before the camera follows. */
   deadzone: 1.1,
   damping: 5.5,
@@ -43,6 +56,12 @@ export const WALKER = {
   brake: 26,
   /** How fast the body turns to face the direction of travel, in radians/sec. */
   turnSpeed: 14,
+  /**
+   * How quickly the walker settles onto a new ground height. Fast enough that
+   * a step never looks like floating, slow enough that it reads as a stride
+   * rather than a teleport.
+   */
+  climbEase: 12,
 } as const;
 
 export const ISO_PHYSICS = {

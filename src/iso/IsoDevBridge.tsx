@@ -4,8 +4,9 @@ import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import { isoOffset } from "./IsoCamera";
 import { placeWalker, simulateWalk, walker } from "./player/walker";
-import { BLOCKERS } from "./world/map";
+import { BLOCKERS, PLATFORMS } from "./world/map";
 import { input } from "@/game/core/input";
+import { setViewWidth } from "./core/zoom";
 
 /**
  * Development-only handle for driving and screenshotting the scene without a
@@ -28,22 +29,29 @@ export function IsoDevBridge() {
       input,
       pose(x: number, z: number, settleFrames = 30) {
         placeWalker(x, z);
-        for (let i = 0; i < settleFrames; i += 1) simulateWalk(1 / 60, BLOCKERS);
+        for (let i = 0; i < settleFrames; i += 1)
+          simulateWalk(1 / 60, BLOCKERS, PLATFORMS);
         const offset = isoOffset();
-        camera.position.set(walker.x + offset.x, offset.y, walker.z + offset.z);
-        camera.lookAt(walker.x, 0, walker.z);
+        camera.position.set(
+          walker.x + offset.x,
+          walker.y + offset.y,
+          walker.z + offset.z,
+        );
+        camera.lookAt(walker.x, walker.y, walker.z);
         gl.render(scene, camera);
-        return { x: walker.x, z: walker.z };
+        return { x: walker.x, y: +walker.y.toFixed(2), z: walker.z };
       },
       /** Frames the whole town rather than following the walker. */
-      overview(zoom = 9) {
+      overview(viewWidth = 120) {
+        setViewWidth(viewWidth);
         const offset = isoOffset();
         camera.position.set(offset.x, offset.y, offset.z);
         camera.lookAt(0, 0, 0);
-        (camera as unknown as { zoom: number }).zoom = zoom;
+        (camera as unknown as { zoom: number }).zoom =
+          gl.domElement.clientWidth / viewWidth;
         camera.updateProjectionMatrix();
         gl.render(scene, camera);
-        return { zoom };
+        return { viewWidth };
       },
     };
   }, [gl, scene, camera]);

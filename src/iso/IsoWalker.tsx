@@ -4,7 +4,9 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
 import { WALKER } from "./core/constants";
-import { walker } from "./player/walker";
+import { simulateWalk, walker } from "./player/walker";
+import { useGame } from "@/game/core/store";
+import { BLOCKERS, PLATFORMS } from "./world/map";
 
 /**
  * The figure, seen from above and at a distance.
@@ -18,6 +20,7 @@ const H = WALKER.height;
 const STRIDE = 1.9;
 
 export function IsoWalker() {
+  const paused = useGame((s) => s.paused);
   const root = useRef<Group>(null);
   const legL = useRef<Group>(null);
   const legR = useRef<Group>(null);
@@ -28,13 +31,18 @@ export function IsoWalker() {
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 1 / 20);
+    // Drives the simulation as well as drawing it. Splitting the two would mean
+    // a second component whose only job is to tick, and one more place for the
+    // wiring to be forgotten.
+    if (!paused) simulateWalk(delta, BLOCKERS, PLATFORMS);
+
     const speed = Math.hypot(walker.vx, walker.vz);
 
     phase.current += (speed * dt) / STRIDE * Math.PI * 2;
     bob.current += dt;
 
     if (root.current) {
-      root.current.position.set(walker.x, 0, walker.z);
+      root.current.position.set(walker.x, walker.y, walker.z);
       root.current.rotation.y = walker.facing;
     }
 
@@ -44,7 +52,7 @@ export function IsoWalker() {
       if (legR.current) legR.current.rotation.x = 0;
       if (armL.current) armL.current.rotation.x = 0.05;
       if (armR.current) armR.current.rotation.x = -0.05;
-      if (root.current) root.current.position.y = breath;
+      if (root.current) root.current.position.y = walker.y + breath;
       return;
     }
 
@@ -55,7 +63,8 @@ export function IsoWalker() {
     if (armL.current) armL.current.rotation.x = -swing * amplitude * 0.75;
     if (armR.current) armR.current.rotation.x = swing * amplitude * 0.75;
     if (root.current) {
-      root.current.position.y = Math.abs(Math.cos(phase.current)) * 0.05;
+      root.current.position.y =
+        walker.y + Math.abs(Math.cos(phase.current)) * 0.05;
     }
   });
 

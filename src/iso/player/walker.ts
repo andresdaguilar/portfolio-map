@@ -1,11 +1,14 @@
 import { ISO_CAMERA, ISO_PHYSICS, WALKER } from "../core/constants";
 import { type Footprint, resolve, screenToWorld } from "../core/nav";
+import { groundHeightAt, type Platform } from "../core/terrain";
 import { input } from "@/game/core/input";
 
 export type WalkState = "idle" | "walk" | "run";
 
 export interface Walker {
   x: number;
+  /** Height of the ground under the walker. Follows the terrace, never jumps. */
+  y: number;
   z: number;
   vx: number;
   vz: number;
@@ -18,6 +21,7 @@ export interface Walker {
 /** Module-level, read every frame by the renderer, the camera and interactions. */
 export const walker: Walker = {
   x: 0,
+  y: 0,
   z: 0,
   vx: 0,
   vz: 0,
@@ -26,8 +30,9 @@ export const walker: Walker = {
   state: "idle",
 };
 
-export function placeWalker(x: number, z: number): void {
+export function placeWalker(x: number, z: number, y = 0): void {
   walker.x = x;
+  walker.y = y;
   walker.z = z;
   walker.vx = 0;
   walker.vz = 0;
@@ -49,7 +54,11 @@ export function angleDelta(from: number, to: number): number {
   return delta;
 }
 
-function step(dt: number, blockers: readonly Footprint[]): void {
+function step(
+  dt: number,
+  blockers: readonly Footprint[],
+  platforms: readonly Platform[],
+): void {
   const dir = screenToWorld(input.moveX, input.moveY, ISO_CAMERA.azimuth);
   const wants = dir.x !== 0 || dir.z !== 0;
 
@@ -86,6 +95,12 @@ function step(dt: number, blockers: readonly Footprint[]): void {
       Math.min(1, WALKER.turnSpeed * dt);
   }
 
+  // Settle onto whatever is underfoot. The terrace risers are low by design,
+  // so easing up to them reads as walking a wide staircase; a hard snap would
+  // make the whole figure jitter one step at a time.
+  const target = groundHeightAt(walker.x, walker.z, platforms);
+  walker.y += (target - walker.y) * Math.min(1, WALKER.climbEase * dt);
+
   const speedNow = Math.hypot(walker.vx, walker.vz);
   walker.state =
     speedNow < 0.2 ? "idle" : speedNow > WALKER.walkSpeed + 0.5 ? "run" : "walk";
@@ -97,13 +112,14 @@ let clock = 0;
 export function simulateWalk(
   frameDelta: number,
   blockers: readonly Footprint[],
+  platforms: readonly Platform[] = [],
 ): void {
   accumulator += Math.min(frameDelta, ISO_PHYSICS.step * ISO_PHYSICS.maxSteps);
 
   let steps = 0;
   while (accumulator >= ISO_PHYSICS.step && steps < ISO_PHYSICS.maxSteps) {
     clock += ISO_PHYSICS.step;
-    step(ISO_PHYSICS.step, blockers);
+    step(ISO_PHYSICS.step, blockers, platforms);
     accumulator -= ISO_PHYSICS.step;
     steps += 1;
   }

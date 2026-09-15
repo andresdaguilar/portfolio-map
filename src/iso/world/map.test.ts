@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BOOKS, CREDENTIALS, EXPERIENCE, PROJECTS, SHOWS } from "@/content";
 import { WALKER } from "../core/constants";
 import { overlapsCircle } from "../core/nav";
 import {
@@ -7,6 +8,7 @@ import {
   DISTRICTS,
   ISO_POIS,
   ISO_SPAWN,
+  RAILINGS,
   nearestIsoPoi,
 } from "./map";
 
@@ -45,11 +47,16 @@ describe("the town", () => {
   });
 
   it("never puts two buildings in the same place", () => {
+    // Parapets are excluded: they meet at the corners of a landing by design,
+    // and a pair of touching handrails is not a level-design mistake.
+    const rails = new Set(RAILINGS.map((r) => r.id));
+    const structures = BLOCKERS.filter((b) => !rails.has(b.id));
+
     const clashes: string[] = [];
-    for (let i = 0; i < BLOCKERS.length; i += 1) {
-      for (let j = i + 1; j < BLOCKERS.length; j += 1) {
-        if (footprintsOverlap(BLOCKERS[i], BLOCKERS[j])) {
-          clashes.push(`${BLOCKERS[i].id} / ${BLOCKERS[j].id}`);
+    for (let i = 0; i < structures.length; i += 1) {
+      for (let j = i + 1; j < structures.length; j += 1) {
+        if (footprintsOverlap(structures[i], structures[j])) {
+          clashes.push(`${structures[i].id} / ${structures[j].id}`);
         }
       }
     }
@@ -77,9 +84,19 @@ describe("the town", () => {
     }
   });
 
-  it("gives every building a label to show", () => {
-    const unlabelled = BUILDINGS.filter((b) => !b.label).map((b) => b.id);
-    expect(unlabelled).toEqual([]);
+  it("puts every piece of content somewhere in the town", () => {
+    // Decorative pieces may be anonymous, but nothing from the content layer
+    // is allowed to exist without a place a visitor can walk up to and read.
+    const placed = new Set(ISO_POIS.map((p) => p.id));
+    const missing = [
+      ...EXPERIENCE.map((e) => e.id),
+      ...CREDENTIALS.map((c) => c.id),
+      ...PROJECTS.map((p) => p.id),
+      ...BOOKS.map((b) => b.id),
+      ...SHOWS.map((s) => s.id),
+    ].filter((id) => !placed.has(id));
+
+    expect(missing).toEqual([]);
   });
 });
 
