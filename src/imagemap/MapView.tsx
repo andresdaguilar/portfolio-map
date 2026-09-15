@@ -13,6 +13,7 @@ import { targetForHotspot } from "./resolve";
 import rawLayout from "./layout.json";
 import type { MapLayout, Point } from "./types";
 import { MAP_IMAGE } from "./config";
+import { fitView } from "./view";
 
 /**
  * The map, walked.
@@ -117,25 +118,25 @@ export function MapView() {
   }, [openPanel]);
 
   /**
-   * How the image is laid into the canvas: the whole map, centred.
+   * How the image is laid into the canvas — the whole map on a desktop window,
+   * filled and following the walker on a phone. See `view.ts`.
    *
    * Worked out on demand rather than cached by the render loop. It used to be
    * a ref the loop filled each frame, which meant a click that landed before
    * the first frame — the map is a couple of megabytes, so there is a window —
    * was converted with the ref's initial values and walked somewhere else
-   * entirely.
+   * entirely. That matters more now: on a phone the transform moves, so a
+   * stale one is wrong on every frame rather than only the first.
    */
-  const fitFor = useCallback((canvas: HTMLCanvasElement) => {
-    const scale = Math.min(
-      canvas.clientWidth / layout.image.width,
-      canvas.clientHeight / layout.image.height,
-    );
-    return {
-      scale,
-      x: (canvas.clientWidth - layout.image.width * scale) / 2,
-      y: (canvas.clientHeight - layout.image.height * scale) / 2,
-    };
-  }, []);
+  const fitFor = useCallback(
+    (canvas: HTMLCanvasElement) =>
+      fitView(
+        { width: canvas.clientWidth, height: canvas.clientHeight },
+        layout.image,
+        character.current.at,
+      ),
+    [],
+  );
 
   const pointerToImage = useCallback(
     (clientX: number, clientY: number): Point => {
@@ -175,7 +176,6 @@ export function MapView() {
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // The whole map, always: there is no zoom past the image's own pixels.
       const { scale, x: ox, y: oy } = fitFor(canvas);
 
       const state = useGame.getState();
