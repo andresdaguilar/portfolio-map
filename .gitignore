@@ -44,3 +44,7 @@ next-env.d.ts
 # without them the site renders an empty canvas. They are committed.
 # The first render, superseded by map2.png and kept only locally.
 /public/map/IsoMAP.jpg
+
+# The CV PDF carries a phone number and this repository is public. It stays on
+# disk and is uploaded to the host separately; see public/README.md.
+/public/*.pdf
