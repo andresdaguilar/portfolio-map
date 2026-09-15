@@ -14,6 +14,12 @@ import rawLayout from "./layout.json";
 import type { MapLayout, Point } from "./types";
 import { MAP_IMAGE } from "./config";
 import { fitView } from "./view";
+import {
+  DEAD_ZONE_PX,
+  isSteering,
+  steerTowards,
+  type Screen,
+} from "./steer";
 
 /**
  * The map, walked.
@@ -34,6 +40,9 @@ const layout = rawLayout as MapLayout;
  * as a place with a person in it rather than a board with a token on it.
  */
 const CHARACTER_HEIGHT = 0.08;
+
+/** Size of the stick's knob under the thumb, in canvas pixels. */
+const KNOB_RADIUS = 18;
 
 export function MapView() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -57,6 +66,21 @@ export function MapView() {
   /** Waypoints left to walk, from a click. Empty when steering by hand. */
   const route = useRef<Point[]>([]);
   const grid = useRef<Grid | null>(null);
+  /**
+   * The pointer currently held down, if any.
+   *
+   * Mutated in place rather than set through React: it changes on every
+   * pointermove and is read on every frame, and a re-render at either rate
+   * would be a re-render too many.
+   */
+  const hold = useRef<{
+    id: number;
+    /** Where the press started — only used to tell a drag from a tap. */
+    from: Screen;
+    at: Screen;
+    since: number;
+    steering: boolean;
+  } | null>(null);
 
   useEffect(() => {
     const img = new Image();
@@ -189,7 +213,29 @@ export function MapView() {
         };
 
         let intent = manual;
-        if (!manual.x && !manual.y && route.current.length) {
+        let speed: number | undefined;
+
+        const stick = hold.current;
+        if (!manual.x && !manual.y && stick) {
+          // Time alone can promote a press to a stick, so this is checked on
+          // the frame as well as on pointermove — a finger that goes down and
+          // never moves would otherwise wait for an event that never comes.
+          stick.steering ||= isSteering(stick.from, stick.at, now - stick.since);
+          if (stick.steering) {
+            const rect = canvas.getBoundingClientRect();
+            const steer = steerTowards(
+              {
+                x: ox + character.current.at.x * layout.image.width * scale,
+                y: oy + character.current.at.y * layout.image.height * scale,
+              },
+              { x: stick.at.x - rect.left, y: stick.at.y - rect.top },
+            );
+            intent = steer.intent;
+            speed = steer.speed;
+          }
+        }
+
+        if (!manual.x && !manual.y && !hold.current?.steering && route.current.length) {
           // Waypoints are consumed as they are reached, so the last leg ends
           // exactly where the click was rather than near it.
           const next = route.current[0];
@@ -202,7 +248,14 @@ export function MapView() {
           }
         }
 
-        character.current = advance(character.current, intent, dt, layout.shapes, aspect);
+        character.current = advance(
+          character.current,
+          intent,
+          dt,
+          layout.shapes,
+          aspect,
+          speed,
+        );
 
         // Compared against the store rather than a local cache: anything else
         // that writes `nearby` would leave a cache stale, and a stale one is
@@ -219,6 +272,11 @@ export function MapView() {
               : null,
           );
         }
+      } else {
+        // A panel opened over a held finger. Drop the stick rather than let it
+        // resume the moment the panel closes, pushing him somewhere nobody
+        // asked for.
+        hold.current = null;
       }
 
       ctx.fillStyle = "#0f141a";
@@ -248,6 +306,17 @@ export function MapView() {
       } else {
         drawCharacter(ctx, { ...shared, facing: character.current.facing });
       }
+
+      // The stick, drawn last so it sits over everything. Without it the map
+      // just starts moving under a finger and nothing says why.
+      const stick = hold.current;
+      if (stick?.steering) {
+        const rect = canvas.getBoundingClientRect();
+        drawStick(ctx, feet, {
+          x: stick.at.x - rect.left,
+          y: stick.at.y - rect.top,
+        });
+      }
     };
 
     raf = requestAnimationFrame(frame);
@@ -255,7 +324,7 @@ export function MapView() {
   }, [image, aspect, fitFor]);
 
   const hint = useMemo(
-    () => (nearby ? nearby.label : "arrows or click to walk"),
+    () => (nearby ? nearby.label : "tap to walk · hold to steer"),
     [nearby],
   );
 
@@ -263,13 +332,43 @@ export function MapView() {
     <div className="fixed inset-0 bg-[#0f141a]">
       <canvas
         ref={canvasRef}
-        className="h-full w-full cursor-pointer"
+        // `touch-none` matters: without it a drag across the map scrolls the
+        // page instead of steering, and the stick never gets a second event.
+        className="h-full w-full cursor-pointer touch-none"
         onPointerDown={(e) => {
           if (useGame.getState().paused) return;
           keys.current.clear();
+          route.current = [];
+          e.currentTarget.setPointerCapture(e.pointerId);
+          hold.current = {
+            id: e.pointerId,
+            from: { x: e.clientX, y: e.clientY },
+            at: { x: e.clientX, y: e.clientY },
+            since: performance.now(),
+            steering: false,
+          };
+        }}
+        onPointerMove={(e) => {
+          const held = hold.current;
+          if (held?.id !== e.pointerId) return;
+          held.at = { x: e.clientX, y: e.clientY };
+          held.steering ||= isSteering(
+            held.from,
+            held.at,
+            performance.now() - held.since,
+          );
+        }}
+        onPointerUp={(e) => {
+          const held = hold.current;
+          if (held?.id !== e.pointerId) return;
+          hold.current = null;
+
+          // A press that never became a stick was a tap, and a tap means "go
+          // there" — which is the pathfinder's job, not the stick's.
+          if (held.steering || useGame.getState().paused) return;
 
           // The grid costs about a tenth of a second to sample, so it is built
-          // on the first click rather than on load — by which time the map is
+          // on the first tap rather than on load — by which time the map is
           // already on screen and the player has decided where to go.
           grid.current ??= buildGrid(layout.shapes, aspect);
 
@@ -278,6 +377,9 @@ export function MapView() {
           route.current = found
             ? smoothPath(found, layout.shapes, aspect).slice(1)
             : [];
+        }}
+        onPointerCancel={() => {
+          hold.current = null;
         }}
       />
 
@@ -334,4 +436,42 @@ export function MapView() {
       <Panel />
     </div>
   );
+}
+
+/**
+ * The stick, while a finger is on it.
+ *
+ * Deliberately faint: it is feedback, not furniture, and the map underneath is
+ * the reason anyone is here. The line from the character to the thumb is the
+ * part that carries the meaning — it says which of the two things on screen is
+ * pushing the other.
+ */
+function drawStick(
+  ctx: CanvasRenderingContext2D,
+  from: Screen,
+  to: Screen,
+): void {
+  const reach = Math.hypot(to.x - from.x, to.y - from.y);
+  if (reach <= DEAD_ZONE_PX) return;
+
+  // Stop the line short of the knob so it does not draw through it.
+  const t = Math.max(0, (reach - KNOB_RADIUS) / reach);
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(232, 163, 61, 0.55)";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(to.x, to.y, KNOB_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(232, 163, 61, 0.2)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(232, 163, 61, 0.8)";
+  ctx.stroke();
+  ctx.restore();
 }
